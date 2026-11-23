@@ -57,9 +57,9 @@ export default function GameScreen() {
           <View style={styles.heroDivider} />
           <View style={styles.heroOverlay} />
         </View>
-        <Text style={styles.kicker}>{formatGameState(data.gameState)} · {formatTimeMsk(data.startTimeUTC)}</Text>
-        <Text style={styles.title}>{data.awayTeam.abbrev} {data.awayTeam.score ?? "—"} : {data.homeTeam.score ?? "—"} {data.homeTeam.abbrev}</Text>
-        <Text style={styles.sub}>{data.awayTeam.name} @ {data.homeTeam.name} · {data.venue ?? "Арена уточняется"}</Text>
+        <Text style={styles.kicker}>{formatGameState(data.gameState)} . {formatTimeMsk(data.startTimeUTC)}</Text>
+        <Text style={styles.title}>{data.awayTeam.abbrev} {data.awayTeam.score ?? "-"} : {data.homeTeam.score ?? "-"} {data.homeTeam.abbrev}</Text>
+        <Text style={styles.sub}>{data.awayTeam.name} @ {data.homeTeam.name} . {data.venue ?? "Арена уточняется"}</Text>
       </View>
 
       <View style={styles.card}>
@@ -69,22 +69,22 @@ export default function GameScreen() {
 
       <View style={styles.card}>
         <Text style={styles.section}>Быстрая сводка</Text>
-        <StatRow label="Броски" away={data.awayTeam.sog ?? "—"} home={data.homeTeam.sog ?? "—"} />
-        <StatRow label="Счёт" away={data.awayTeam.score ?? "—"} home={data.homeTeam.score ?? "—"} />
+        <StatRow label="Броски" away={data.awayTeam.sog ?? "-"} home={data.homeTeam.sog ?? "-"} />
+        <StatRow label="Счёт" away={data.awayTeam.score ?? "-"} home={data.homeTeam.score ?? "-"} />
         <StatRow label="Силовые" away={data.awaySkaters.reduce((s, p) => s + p.hits, 0)} home={data.homeSkaters.reduce((s, p) => s + p.hits, 0)} />
         <StatRow label="Штраф, мин" away={data.awaySkaters.reduce((s, p) => s + p.pim, 0)} home={data.homeSkaters.reduce((s, p) => s + p.pim, 0)} />
       </View>
 
       <View style={styles.card}>
         <Text style={styles.section}>Кто тащил у {data.awayTeam.abbrev}</Text>
-        {awayTop.map((p) => <Text key={p.playerId} style={styles.player}>{p.name} — {p.goals} Г + {p.assists} П, {p.sog} брос., {p.toi}</Text>)}
-        {data.awayGoalies.map((g) => <Text key={g.playerId} style={styles.playerMuted}>{g.name} — {g.saves}/{g.shotsAgainst} сейвов{g.decision ? `, ${g.decision}` : ""}</Text>)}
+        {awayTop.map((p) => <Text key={p.playerId} style={styles.player}>{p.name} - {p.goals} Г + {p.assists} П, {p.sog} брос., {p.toi}</Text>)}
+        {data.awayGoalies.map((g) => <Text key={g.playerId} style={styles.playerMuted}>{g.name} - {g.saves}/{g.shotsAgainst} сейвов{g.decision ? `, ${g.decision}` : ""}</Text>)}
       </View>
 
       <View style={styles.card}>
         <Text style={styles.section}>Кто тащил у {data.homeTeam.abbrev}</Text>
-        {homeTop.map((p) => <Text key={p.playerId} style={styles.player}>{p.name} — {p.goals} Г + {p.assists} П, {p.sog} брос., {p.toi}</Text>)}
-        {homeGoalies(data).map((g) => <Text key={g.playerId} style={styles.playerMuted}>{g.name} — {g.saves}/{g.shotsAgainst} сейвов{g.decision ? `, ${g.decision}` : ""}</Text>)}
+        {homeTop.map((p) => <Text key={p.playerId} style={styles.player}>{p.name} - {p.goals} Г + {p.assists} П, {p.sog} брос., {p.toi}</Text>)}
+        {homeGoalies(data).map((g) => <Text key={g.playerId} style={styles.playerMuted}>{g.name} - {g.saves}/{g.shotsAgainst} сейвов{g.decision ? `, ${g.decision}` : ""}</Text>)}
       </View>
     </ScrollView>
   );

@@ -63,21 +63,23 @@ function MatchCard({ game, onPress }: { game: Game; onPress: () => void }) {
 
         <View style={styles.scoreRow}>
           <View style={styles.teamCol}>
+            {game.awayTeam.logo ? <Image source={{ uri: game.awayTeam.logo }} style={styles.teamLogo} /> : null}
             <Text style={styles.teamAbbrev}>{game.awayTeam.abbrev}</Text>
             <Text style={styles.teamName} numberOfLines={1}>{game.awayTeam.name}</Text>
           </View>
           <View style={styles.scorePill}>
             <Text style={styles.score}>
-              {scoreKnown ? `${game.awayTeam.score} : ${game.homeTeam.score}` : "вЂ” : вЂ”"}
+              {scoreKnown ? `${game.awayTeam.score} : ${game.homeTeam.score}` : "- : -"}
             </Text>
           </View>
           <View style={[styles.teamCol, styles.teamColRight]}>
+            {game.homeTeam.logo ? <Image source={{ uri: game.homeTeam.logo }} style={styles.teamLogo} /> : null}
             <Text style={styles.teamAbbrev}>{game.homeTeam.abbrev}</Text>
             <Text style={[styles.teamName, styles.teamNameRight]} numberOfLines={1}>{game.homeTeam.name}</Text>
           </View>
         </View>
 
-        <Text style={styles.meta}>{game.venue ?? "РђСЂРµРЅР° СѓС‚РѕС‡РЅСЏРµС‚СЃСЏ"} В· Р±СЂРѕСЃРєРё {game.awayTeam.sog ?? "вЂ”"}:{game.homeTeam.sog ?? "вЂ”"}</Text>
+        <Text style={styles.meta}>{game.venue ?? "Арена уточняется"} · броски {game.awayTeam.sog ?? "-"}:{game.homeTeam.sog ?? "-"}</Text>
         <Text style={styles.mood}>{gameMood(game)}</Text>
       </View>
     </Pressable>
@@ -107,7 +109,7 @@ export default function HomeScreen() {
         const g = await getGamesByDate(selected);
         if (alive) setGames(g);
       } catch (e: any) {
-        if (alive) setError(e?.message ?? "РќРµ СѓРґР°Р»РѕСЃСЊ Р·Р°РіСЂСѓР·РёС‚СЊ РјР°С‚С‡Рё");
+        if (alive) setError(e?.message ?? "Не удалось загрузить матчи");
       } finally {
         if (alive) setLoading(false);
       }
@@ -138,15 +140,15 @@ export default function HomeScreen() {
 
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.title}>{humanDate(selected)}</Text>
-        <Text style={styles.lead}>Р›РµРЅС‚Р° РјР°С‚С‡РµР№, С†РёС„СЂС‹ Рё РЅРѕСЂРјР°Р»СЊРЅС‹Р№ СЂР°Р·Р±РѕСЂ вЂ” Р±РµР· РєР°Р·С‘РЅРЅРѕРіРѕ С‚РѕРЅР° Рё РѕРґРёРЅР°РєРѕРІС‹С… С„СЂР°Р·.</Text>
+        <Text style={styles.lead}>Лента матчей, цифры и нормальный разбор - без казённого тона и одинаковых фраз.</Text>
 
         {loading ? <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} /> : null}
         {error ? <Text style={styles.error}>{error}</Text> : null}
 
         {!loading && !error && games.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>РџР°СѓР·Р° РІ РєР°Р»РµРЅРґР°СЂРµ.</Text>
-            <Text style={styles.emptyText}>РќР° СЌС‚Сѓ РґР°С‚Сѓ РёРіСЂ РЅРµС‚. Р›РёРіР° РІР·СЏР»Р° РїРµСЂРµРґС‹С€РєСѓ, Р° РјС‹ вЂ” РєРѕСЂРѕС‚РєСѓСЋ РїР°СѓР·Сѓ РјРµР¶РґСѓ СЃРјРµРЅР°РјРё.</Text>
+            <Text style={styles.emptyTitle}>Пауза в календаре.</Text>
+            <Text style={styles.emptyText}>На эту дату игр нет. Лига взяла передышку, а мы - короткую паузу между сменами.</Text>
           </View>
         ) : null}
 
@@ -189,16 +191,14 @@ const styles = StyleSheet.create({
   state: { color: "#ffe0a3", fontSize: 11, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5 },
   time: { color: "rgba(238,244,251,0.75)", fontSize: 12, fontFamily: fonts.mono },
   scoreRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  teamCol: { flex: 1 },
-  teamColRight: { alignItems: "flex-end" },
-  teamAbbrev: { color: colors.text, fontSize: 24, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.35)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
-  teamName: { color: "rgba(238,244,251,0.78)", fontSize: 12, marginTop: 2 },
-  teamNameRight: { textAlign: "right" },
+  teamCol: { flex: 1, alignItems: "center" },
+  teamColRight: { alignItems: "center" },
+  teamLogo: { width: 44, height: 44, marginBottom: 4 },
+  teamAbbrev: { color: colors.text, fontSize: 22, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.35)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
+  teamName: { color: "rgba(238,244,251,0.78)", fontSize: 12, marginTop: 2, textAlign: "center" },
+  teamNameRight: { textAlign: "center" },
   scorePill: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" },
   score: { color: colors.text, fontSize: 28, fontWeight: "900", minWidth: 88, textAlign: "center", fontFamily: fonts.mono },
   meta: { color: "rgba(238,244,251,0.72)", fontSize: 12, marginTop: 10 },
   mood: { color: "#eef4fb", fontSize: 14, lineHeight: 21, marginTop: 8, fontFamily: fonts.body },
 });
-
-
-
