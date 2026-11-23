@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { colors, fonts } from "../../theme";
 import { formatGameState, formatTimeMsk, getGameDetails, type GameDetails } from "../../lib/nhl";
@@ -50,12 +50,20 @@ export default function GameScreen() {
 
   return (
     <ScrollView style={styles.safe} contentContainerStyle={styles.content}>
-      <Text style={styles.kicker}>{formatGameState(data.gameState)} · {formatTimeMsk(data.startTimeUTC)}</Text>
-      <Text style={styles.title}>{data.awayTeam.abbrev} {data.awayTeam.score ?? "—"} : {data.homeTeam.score ?? "—"} {data.homeTeam.abbrev}</Text>
-      <Text style={styles.sub}>{data.awayTeam.name} @ {data.homeTeam.name} · {data.venue ?? "Арена уточняется"}</Text>
+      <View style={styles.hero}>
+        <View style={styles.heroSplit} pointerEvents="none">
+          <View style={styles.heroHalf}>{data.awayTeam.logo ? <Image source={{ uri: data.awayTeam.logo }} style={styles.heroLogo} /> : null}</View>
+          <View style={styles.heroHalf}>{data.homeTeam.logo ? <Image source={{ uri: data.homeTeam.logo }} style={styles.heroLogo} /> : null}</View>
+          <View style={styles.heroDivider} />
+          <View style={styles.heroOverlay} />
+        </View>
+        <Text style={styles.kicker}>{formatGameState(data.gameState)} · {formatTimeMsk(data.startTimeUTC)}</Text>
+        <Text style={styles.title}>{data.awayTeam.abbrev} {data.awayTeam.score ?? "—"} : {data.homeTeam.score ?? "—"} {data.homeTeam.abbrev}</Text>
+        <Text style={styles.sub}>{data.awayTeam.name} @ {data.homeTeam.name} · {data.venue ?? "Арена уточняется"}</Text>
+      </View>
 
       <View style={styles.card}>
-        <Text style={styles.section}>Как это выглядело</Text>
+        <Text style={styles.section}>Подробный разбор</Text>
         {story.map((line, i) => <Text key={i} style={styles.story}>{line}</Text>)}
       </View>
 
@@ -89,10 +97,16 @@ const styles = StyleSheet.create({
   content: { padding: 16, paddingBottom: 40 },
   center: { flex: 1, backgroundColor: colors.bg, alignItems: "center", justifyContent: "center", padding: 16 },
   error: { color: colors.loss },
-  kicker: { color: colors.accent, fontSize: 11, fontWeight: "800", letterSpacing: 1.1, textTransform: "uppercase" },
+  hero: { borderRadius: 20, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", marginBottom: 12, padding: 14, backgroundColor: "rgba(255,255,255,0.04)" },
+  heroSplit: { ...StyleSheet.absoluteFill, flexDirection: "row" },
+  heroHalf: { flex: 1, overflow: "hidden" },
+  heroLogo: { width: "180%", height: "180%", left: "-40%", top: "-40%", opacity: 0.18 },
+  heroDivider: { position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, backgroundColor: "rgba(255,255,255,0.18)" },
+  heroOverlay: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(8,12,18,0.28)" },
+  kicker: { color: "#ffd28f", fontSize: 11, fontWeight: "800", letterSpacing: 1.1, textTransform: "uppercase" },
   title: { color: colors.text, fontSize: 34, fontWeight: "900", marginTop: 8, fontFamily: fonts.mono },
-  sub: { color: colors.muted, fontSize: 13, marginTop: 6, marginBottom: 14 },
-  card: { backgroundColor: colors.panel, borderWidth: 1, borderColor: colors.line, borderRadius: 16, padding: 14, marginBottom: 12 },
+  sub: { color: "rgba(238,244,251,0.78)", fontSize: 13, marginTop: 6 },
+  card: { backgroundColor: "rgba(18,25,35,0.72)", borderWidth: 1, borderColor: "rgba(255,255,255,0.1)", borderRadius: 16, padding: 14, marginBottom: 12 },
   section: { color: colors.text, fontSize: 14, fontWeight: "800", marginBottom: 10, textTransform: "uppercase", letterSpacing: 0.6 },
   story: { color: "#d9e5f2", fontSize: 15, lineHeight: 23, marginBottom: 8, fontFamily: fonts.body },
   statRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingVertical: 8, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.line },

@@ -5,6 +5,18 @@ export type TeamSide = {
   score?: number;
   sog?: number;
   logo?: string;
+  faceoffWinningPctg?: number;
+  powerPlayConversion?: string;
+  pim?: number;
+  hits?: number;
+  blocks?: number;
+};
+
+export type TeamInfo = {
+  id: number;
+  abbrev: string;
+  name: string;
+  logo: string;
 };
 
 export type Game = {
@@ -72,6 +84,11 @@ function mapTeam(t: any): TeamSide {
     score: t?.score,
     sog: t?.sog,
     logo: t?.logo,
+    faceoffWinningPctg: t?.faceoffWinningPctg,
+    powerPlayConversion: t?.powerPlayConversion,
+    pim: t?.pim,
+    hits: t?.hits,
+    blocks: t?.blocks,
   };
 }
 
@@ -88,6 +105,17 @@ export async function getGamesByDate(date: string): Promise<Game[]> {
     awayTeam: mapTeam(g.awayTeam),
     homeTeam: mapTeam(g.homeTeam),
   }));
+}
+
+export async function getAllTeams(): Promise<TeamInfo[]> {
+  const data = await fetchJson<any>(`${BASE}/standings/now`);
+  const standings = Array.isArray(data?.standings) ? data.standings : [];
+  return standings.map((t: any) => ({
+    id: t.teamAbbrev?.default ? t.teamId ?? 0 : 0,
+    abbrev: t.teamAbbrev?.default ?? "",
+    name: t.teamName?.default ?? t.teamCommonName?.default ?? "",
+    logo: t.teamLogo ?? "",
+  })).filter((t: TeamInfo) => t.abbrev && t.logo);
 }
 
 function mapSkater(p: any): SkaterLine {
