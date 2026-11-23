@@ -71,9 +71,16 @@ export type GameDetails = {
 const BASE = "https://api-web.nhle.com/v1";
 
 async function fetchJson<T>(url: string): Promise<T> {
-  const res = await fetch(url, { headers: { "Accept": "application/json" } });
+  const res = await fetch(url, {
+    headers: {
+      "Accept": "application/json; charset=utf-8",
+      "Accept-Charset": "utf-8",
+    },
+  });
   if (!res.ok) throw new Error(`NHL API ${res.status}`);
-  return res.json() as Promise<T>;
+  const buffer = await res.arrayBuffer();
+  const text = new TextDecoder("utf-8").decode(buffer).replace(/^\uFEFF/, "");
+  return JSON.parse(text) as T;
 }
 
 function mapTeam(t: any): TeamSide {
