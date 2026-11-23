@@ -35,12 +35,19 @@ export default function HomeScreen() {
 
   useEffect(() => {
     let alive = true;
-    setLoading(true);
-    setError(null);
-    getGamesByDate(selected)
-      .then((g) => { if (alive) setGames(g); })
-      .catch((e) => { if (alive) setError(e?.message ?? "Не удалось загрузить матчи"); })
-      .finally(() => { if (alive) setLoading(false); });
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const g = await getGamesByDate(selected);
+        if (alive) setGames(g);
+      } catch (e: any) {
+        if (alive) setError(e?.message ?? "Не удалось загрузить матчи");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
+    void load();
     return () => { alive = false; };
   }, [selected]);
 

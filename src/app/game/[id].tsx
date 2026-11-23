@@ -25,12 +25,19 @@ export default function GameScreen() {
     const gameId = Number(id);
     if (!gameId) return;
     let alive = true;
-    setLoading(true);
-    setError(null);
-    getGameDetails(gameId)
-      .then((d) => { if (alive) setData(d); })
-      .catch((e) => { if (alive) setError(e?.message ?? "Не удалось загрузить матч"); })
-      .finally(() => { if (alive) setLoading(false); });
+    const load = async () => {
+      setLoading(true);
+      setError(null);
+      try {
+        const d = await getGameDetails(gameId);
+        if (alive) setData(d);
+      } catch (e: any) {
+        if (alive) setError(e?.message ?? "Не удалось загрузить матч");
+      } finally {
+        if (alive) setLoading(false);
+      }
+    };
+    void load();
     return () => { alive = false; };
   }, [id]);
 
