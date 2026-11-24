@@ -76,6 +76,7 @@ function TeamCrest({ abbrev, logo, size = 58 }: { abbrev: string; logo?: string;
 
 function DateWheel({ selected, onSelect }: { selected: string; onSelect: (key: string) => void }) {
   const scrollRef = useRef<ScrollView>(null);
+  const { width } = useWindowDimensions();
   const dates = useMemo(() => {
     const today = new Date();
     return Array.from({ length: 15 }, (_, i) => {
@@ -106,6 +107,11 @@ function DateWheel({ selected, onSelect }: { selected: string; onSelect: (key: s
         decelerationRate="fast"
         snapToInterval={82}
         snapToAlignment="center"
+        onMomentumScrollEnd={(event) => {
+          const raw = Math.round((event.nativeEvent.contentOffset.x + width / 2 - 61) / 82);
+          const index = Math.max(0, Math.min(dates.length - 1, raw));
+          onSelect(dateKey(dates[index]));
+        }}
         contentContainerStyle={styles.wheelContent}
       >
         {dates.map((d, i) => {
