@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
+  ImageBackground,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -202,6 +203,8 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
+      <ImageBackground source={{ uri: "https://images.pexels.com/photos/6539276/pexels-photo-6539276.jpeg?auto=compress&cs=tinysrgb&w=1200" }} resizeMode="cover" style={StyleSheet.absoluteFillObject} />
+      <View style={styles.scrim} />
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[styles.content, { minHeight: "100%" }]}
@@ -258,7 +261,8 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
-  screen: { flex: 1, backgroundColor: C.bg },
+  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(5,10,16,0.84)" },
+  screen: { flex: 1, backgroundColor: "transparent" },
   content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 38 },
   brandRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 28 },
   brandOverline: { color: C.muted, fontSize: 9, fontWeight: "800", letterSpacing: 2.5, marginBottom: 3 },
