@@ -54,73 +54,60 @@ export function gameMood(game: Game): string {
 }
 
 export function buildGameStory(details: GameDetails): string[] {
-  const a = details.awayTeam;
-  const h = details.homeTeam;
-  const aScore = a.score ?? 0;
-  const hScore = h.score ?? 0;
+  const away = details.awayTeam;
+  const home = details.homeTeam;
+  const awayScore = away.score ?? 0;
+  const homeScore = home.score ?? 0;
   const state = (details.gameState || "").toUpperCase();
+  const shotsAway = away.sog ?? sum(details.awaySkaters, "sog");
+  const shotsHome = home.sog ?? sum(details.homeSkaters, "sog");
+  const hitsAway = sum(details.awaySkaters, "hits");
+  const hitsHome = sum(details.homeSkaters, "hits");
+  const pimAway = sum(details.awaySkaters, "pim");
+  const pimHome = sum(details.homeSkaters, "pim");
+  const leaderAway = topSkater(details.awaySkaters);
+  const leaderHome = topSkater(details.homeSkaters);
   const lines: string[] = [];
-  const awayHits = sum(details.awaySkaters, "hits");
-  const homeHits = sum(details.homeSkaters, "hits");
-  const awayPim = sum(details.awaySkaters, "pim");
-  const homePim = sum(details.homeSkaters, "pim");
-  const awaySog = a.sog ?? sum(details.awaySkaters, "sog");
-  const homeSog = h.sog ?? sum(details.homeSkaters, "sog");
-  const topA = topSkater(details.awaySkaters);
-  const topH = topSkater(details.homeSkaters);
-  const totalGoals = aScore + hScore;
+  const localStart = details.startTimeUTC
+    ? new Date(details.startTimeUTC).toLocaleString("ru-RU", { dateStyle: "medium", timeStyle: "short" })
+    : "время уточняется";
 
   if (state === "FUT" || state === "PRE") {
-    lines.push(`${a.name} (${a.abbrev}) приезжают к ${h.name} (${h.abbrev}) — вывеска понятная, а вот сценарий пока спрятан.`);
-    lines.push(`Старт назначен на ${details.startTimeUTC ? new Date(details.startTimeUTC).toLocaleString("ru-RU", { timeZone: "Europe/Moscow" }) : "уточняемое время"} по Москве.`);
-    lines.push(`Арена встречи: ${details.venue ?? "данные по площадке пока не подтянулись"}.`);
-    lines.push(`Для гостей ключевой вопрос — как быстро они войдут в темп на чужом льду и не отдадут первую инициативу.`);
-    lines.push(`Хозяевам важно не превращать первые смены в разведку, иначе соперник быстро почувствует свободу.`);
-    lines.push(`До вбрасывания любая статистика — только фон, но именно из таких матчей потом вырастают большие серии.`);
-    lines.push(`Если игра откроется рано, смотреть будет весело; если затянется, цена первого гола вырастет в разы.`);
-    lines.push(`В таких встречах обычно выигрывает тот, кто меньше спорит с эпизодами и лучше работает на добиваниях.`);
-    lines.push(`Отдельный интерес — вратарская дуэль: один спокойный сейв в нужный момент иногда меняет весь вечер.`);
-    lines.push(`Гостям полезно проверять пятак и второй темп, а не надеяться только на чистый вход в зону.`);
-    lines.push(`Хозяева, в свою очередь, будут искать преимущество через давление и контроль нейтральной зоны.`);
-    lines.push(`Матч ещё не начался, но интрига уже есть: характер этой вывески обычно раскрывается быстро.`);
-    lines.push(`После сирены всё сведётся к простым вещам — скорость, дисциплина и готовность терпеть неудобный хоккей.`);
-    lines.push(`Пока же берём паузу, но держим внимание: такие игры редко бывают пустыми.`);
-    lines.push(`Как только шайба пойдёт в игру, статистика начнёт говорить громче любых ожиданий.`);
-    return lines.slice(0, 16);
+    lines.push(`${away.name} приезжают к ${home.name}: матч ещё впереди, поэтому никаких выводов по счёту пока нет.`);
+    lines.push(`Начало — ${localStart} по местному времени устройства, арена — ${details.venue ?? "площадка уточняется"}.`);
+    lines.push("Главная интрига — кто первым навяжет свой темп и заставит соперника чаще играть без шайбы.");
+    lines.push("Стоит следить за специальными бригадами и работой на пятаке: именно такие детали часто решают равные встречи.");
+    lines.push("После стартового вбрасывания цифры обновятся, и предварительные ожидания можно будет сверить с тем, что происходит на льду.");
+    return lines;
   }
 
-  const winner = aScore === hScore ? null : aScore > hScore ? a : h;
-  const loser = aScore === hScore ? null : aScore > hScore ? h : a;
-  const diff = Math.abs(aScore - hScore);
-  const shotsLeader = awaySog === homeSog ? "по броскам команды шли ноздря в ноздрю" : awaySog > homeSog ? `по броскам активнее были ${a.abbrev} (${awaySog}:${homeSog})` : `по броскам больше нагружали ${h.abbrev} (${homeSog}:${awaySog})`;
-
-  if (winner && loser) {
-    lines.push(`Финальный счёт ${a.abbrev} ${aScore}:${hScore} ${h.abbrev}, и этот результат вполне объясняет ход вечера.`);
-    if (diff >= 3) lines.push(`${winner.abbrev} не просто забрали очки — они методично разложили матч на удобные для себя отрезки.`);
-    else if (diff === 1) lines.push(`${winner.abbrev} дожали встречу на тонкой грани, где каждый выезд из зоны имел значение.`);
-    else lines.push(`${winner.abbrev} выглядели собраннее в ключевые моменты и заслуженно увезли победу.`);
-  } else {
-    lines.push(`На табло ${aScore}:${hScore}, и по делу: команды долго не давали друг другу уйти в комфорт.`);
+  if (state === "LIVE" || state === "CRIT") {
+    lines.push(`Игра продолжается: ${away.abbrev} — ${awayScore}, ${home.abbrev} — ${homeScore}. Это промежуточная картина, не итог матча.`);
+    lines.push(`По броскам сейчас ${shotsAway}:${shotsHome}; важно смотреть не только на количество, но и на качество моментов.`);
+    if (leaderAway) lines.push(`У гостей уже заметен ${leaderAway.name}: ${leaderAway.goals} голов и ${leaderAway.assists} передач.`);
+    if (leaderHome) lines.push(`У хозяев в протоколе выделяется ${leaderHome.name}: ${leaderHome.goals} голов и ${leaderHome.assists} передач.`);
+    lines.push(`Силовая работа: ${away.abbrev} — ${hitsAway} хитов, ${home.abbrev} — ${hitsHome}; штрафное время — ${pimAway} и ${pimHome} минут соответственно.`);
+    lines.push("Пока рано подводить черту: следующая смена или удаление способны полностью поменять рисунок встречи.");
+    return lines.slice(0, 8);
   }
 
-  lines.push(`По объёму работы ${shotsLeader}, хотя качество моментов важнее голого количества.`);
-  lines.push(`Силовой фон: ${a.abbrev} нанесли ${awayHits} хитов, ${h.abbrev} ответили ${homeHits} — игра не была ватной.`);
-  lines.push(`Штрафной тонус тоже сказался: ${a.abbrev} набрали ${awayPim} минут, ${h.abbrev} — ${homePim}.`);
-  if (topA) lines.push(`У гостей заметнее всех был ${topA.name}: ${topA.goals} голов, ${topA.assists} передач, ${topA.sog} бросков, ${topA.hits} силовых, время на льду ${topA.toi}.`);
-  if (topH) lines.push(`У хозяев выделялся ${topH.name}: ${topH.goals} голов, ${topH.assists} передач, ${topH.sog} бросков, ${topH.hits} силовых, TOI ${topH.toi}.`);
-  lines.push(`Вратарская история у ${a.abbrev}: ${goalieSummary(details, "away")}`);
-  lines.push(`Вратарская история у ${h.abbrev}: ${goalieSummary(details, "home")}`);
-  if (totalGoals >= 7) lines.push(`Матч получился открытым: при ${totalGoals} шайбах оборона регулярно превращалась в обсуждаемую тему.`);
-  else if (totalGoals <= 3) lines.push(`Шайб было немного (${totalGoals}), поэтому цена каждой потери и каждого отскока резко росла.`);
-  else lines.push(`По голам (${totalGoals}) игра держалась в рабочем диапазоне, но напряжение не проседало.`);
-  if (awaySog - homeSog >= 10) lines.push(`${a.abbrev} заметно больше бросали, и это давление рано или поздно должно было сказаться.`);
-  else if (homeSog - awaySog >= 10) lines.push(`${h.abbrev} чаще доставляли шайбу к воротам, заставляя гостей долго жить в обороне.`);
-  else lines.push(`Разрыв по броскам был умеренным, так что исход во многом решался реализацией и мелкими ошибками.`);
-  if (diff === 1) lines.push(`При разнице в одну шайбу особенно бросались в глаза детали: выигранное вбрасывание, неудачная смена, лишний отскок.`);
-  if (diff >= 3) lines.push(`При таком разрыве уже не спасают отдельные всплески — нужна была целая перестройка игры, а её не случилось.`);
-  lines.push(`В сумме это был матч не про одну цифру, а про сочетание темпа, дисциплины и вратарской устойчивости.`);
-  lines.push(`Для ${a.abbrev} этот вечер полезно разбирать по эпизодам входа в зону и работе на пятаке, а не только по счёту.`);
-  lines.push(`Для ${h.abbrev} выводы тоже лежат в деталях: где терялась позиция, где не хватило свежести, где упустили второй шанс.`);
-  lines.push(`Итоговая картина получилась объёмной: здесь есть и тактика, и характер, и пара цифр, которые лучше любой громкой фразы.`);
-  return lines.slice(0, 18);
+  const tied = awayScore === homeScore;
+  const winner = tied ? null : awayScore > homeScore ? away : home;
+  const loser = tied ? null : awayScore > homeScore ? home : away;
+  const goalDiff = Math.abs(awayScore - homeScore);
+  const periodType = details.periodDescriptor?.periodType?.toUpperCase();
+  const finish = periodType === "OT" ? "в овертайме" : periodType === "SO" ? "в серии буллитов" : "в основное время";
+  lines.push(tied
+    ? `Матч завершился со счётом ${awayScore}:${homeScore} — победителя не выявили.`
+    : `${winner!.abbrev} обыграли ${loser!.abbrev} со счётом ${winner!.score}:${loser!.score} ${finish}.`);
+  lines.push(`По броскам команды завершили встречу с показателем ${shotsAway}:${shotsHome}; это показывает объём атакующей работы, но не заменяет качество моментов.`);
+  if (leaderAway) lines.push(`У гостей самым результативным стал ${leaderAway.name}: ${leaderAway.goals} голов, ${leaderAway.assists} передач и ${leaderAway.points} очков.`);
+  if (leaderHome) lines.push(`У хозяев больше всего очков набрал ${leaderHome.name}: ${leaderHome.goals} голов, ${leaderHome.assists} передач и ${leaderHome.points} очков.`);
+  lines.push(`В силовой борьбе ${away.abbrev} записали на свой счёт ${hitsAway} хитов, ${home.abbrev} — ${hitsHome}; штрафное время составило ${pimAway} и ${pimHome} минут.`);
+  lines.push(`Вратарь гостей: ${goalieSummary(details, "away")}`);
+  lines.push(`Вратарь хозяев: ${goalieSummary(details, "home")}`);
+  if (goalDiff === 1) lines.push("Разница в одну шайбу подчёркивает цену каждого удаления, отскока и выигранного единоборства.");
+  else if (goalDiff >= 3) lines.push("Разрыв в несколько шайб говорит о заметном преимуществе победителя на табло, хотя отдельные игровые эпизоды всё равно требуют разбора.");
+  else lines.push("Счёт получился плотным: решающими стали конкретные реализации и эпизоды, а не одна отдельная цифра.");
+  return lines.slice(0, 9);
 }

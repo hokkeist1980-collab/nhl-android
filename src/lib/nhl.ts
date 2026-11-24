@@ -180,12 +180,11 @@ export function formatGameState(state: string): string {
   return state;
 }
 
-export function formatTimeMsk(iso: string): string {
+export function formatTimeLocal(iso: string): string {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return "";
   return new Intl.DateTimeFormat("ru-RU", {
     hour: "2-digit",
     minute: "2-digit",
-    timeZone: "Europe/Moscow",
   }).format(d) + " МСК";
 }
