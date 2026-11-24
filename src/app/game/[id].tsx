@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { ActivityIndicator, Image, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useLocalSearchParams } from "expo-router";
 import { colors, fonts } from "../../theme";
-import { formatGameState, formatTimeMsk, getGameDetails, type GameDetails } from "../../lib/nhl";
+import { formatGameState, formatTimeLocal, getGameDetails, type GameDetails } from "../../lib/nhl";
 import { buildGameStory } from "../../lib/boxStyle";
 
 function StatRow({ label, away, home }: { label: string; away: string | number; home: string | number }) {
@@ -57,7 +57,7 @@ export default function GameScreen() {
           <View style={styles.heroDivider} />
           <View style={styles.heroOverlay} />
         </View>
-        <Text style={styles.kicker}>{formatGameState(data.gameState)} . {formatTimeMsk(data.startTimeUTC)}</Text>
+        <Text style={styles.kicker}>{formatGameState(data.gameState)} . {formatTimeLocal(data.startTimeUTC)}</Text>
         <Text style={styles.title}>{data.awayTeam.abbrev} {data.awayTeam.score ?? "-"} : {data.homeTeam.score ?? "-"} {data.homeTeam.abbrev}</Text>
         <Text style={styles.sub}>{data.awayTeam.name} @ {data.homeTeam.name} . {data.venue ?? "Арена уточняется"}</Text>
       </View>
