@@ -1,101 +1,171 @@
-import { useEffect, useMemo, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ActivityIndicator,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Text,
+  View,
+  useWindowDimensions,
+} from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { colors, fonts } from "../theme";
-import { formatGameState, formatTimeLocal, getGamesByDate, type Game } from "../lib/nhl";
-import { gameMood } from "../lib/boxStyle";
+import SvgUri from "react-native-svg";
+import { Game, getGamesByDate } from "../lib/nhl";
 
-function isoDate(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${y}-${m}-${day}`;
+const C = {
+  bg: "#080D13",
+  surface: "#111A24",
+  surface2: "#182431",
+  stroke: "rgba(226,238,248,0.10)",
+  text: "#F2F6FA",
+  muted: "#8D9BA9",
+  red: "#D83D48",
+  ice: "#9CC8E8",
+  gold: "#E8C88A",
+};
+
+function dateKey(date: Date) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, "0");
+  const d = String(date.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
 }
 
-function addDays(dateStr: string, delta: number): string {
-  const d = new Date(`${dateStr}T12:00:00Z`);
-  d.setUTCDate(d.getUTCDate() + delta);
-  return isoDate(d);
+function dayLabel(date: Date) {
+  return new Intl.DateTimeFormat("ru-RU", { weekday: "short" }).format(date).replace(".", "").toUpperCase();
+}
+function dateLabel(date: Date) {
+  return new Intl.DateTimeFormat("ru-RU", { day: "2-digit", month: "2-digit" }).format(date);
+}
+function fullDate(date: Date) {
+  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", weekday: "long" }).format(date);
+}
+function gameTime(game: Game) {
+  if (!game.startTimeUTC) return "ВРЕМЯ НЕИЗВЕСТНО";
+  return new Intl.DateTimeFormat("ru-RU", { hour: "2-digit", minute: "2-digit" }).format(new Date(game.startTimeUTC));
+}
+function stateLabel(game: Game) {
+  const state = game.gameState.toUpperCase();
+  if (state === "LIVE" || state === "CRIT") return "В ИГРЕ";
+  if (state === "FINAL" || state === "OFF") return "МАТЧ ЗАВЕРШЁН";
+  if (state === "PRE" || state === "FUT") return "ЕЩЁ НЕ НАЧАЛСЯ";
+  return "СТАТУС УТОЧНЯЕТСЯ";
 }
 
-function humanDate(dateStr: string): string {
-  const d = new Date(`${dateStr}T12:00:00`);
-  return new Intl.DateTimeFormat("ru-RU", { day: "numeric", month: "long", weekday: "short" }).format(d);
-}
-
-function RinkBackground() {
+function TeamCrest({ abbrev, logo, size = 58 }: { abbrev: string; logo?: string; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  const source = logo || `https://assets.nhle.com/logos/nhl/svg/${abbrev}_light.svg`;
   return (
-    <View style={styles.rinkBackdrop} pointerEvents="none">
-      <View style={styles.rinkOuter}>
-        <View style={styles.rinkCenterLine} />
-        <View style={styles.rinkBlueLineTop} />
-        <View style={styles.rinkBlueLineBottom} />
-        <View style={styles.rinkCenterCircle} />
-        <View style={[styles.rinkFaceoff, styles.rinkFaceoffTL]} />
-        <View style={[styles.rinkFaceoff, styles.rinkFaceoffTR]} />
-        <View style={[styles.rinkFaceoff, styles.rinkFaceoffBL]} />
-        <View style={[styles.rinkFaceoff, styles.rinkFaceoffBR]} />
-        <View style={styles.rinkGoalTop} />
-        <View style={styles.rinkGoalBottom} />
-      </View>
-      <View style={styles.rinkShade} />
+    <View style={[styles.crest, { width: size + 18, height: size + 18 }]}>
+      {source && !failed ? (
+        <SvgUri
+          uri={source}
+          width={size}
+          height={size}
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <Text style={styles.crestFallback}>{abbrev}</Text>
+      )}
     </View>
   );
 }
 
-function isWinner(game: Game, side: "away" | "home"): boolean {
-  const state = (game.gameState || "").toUpperCase();
-  if (!["FINAL", "OFF"].includes(state)) return false;
-  const away = game.awayTeam.score;
-  const home = game.homeTeam.score;
-  if (typeof away !== "number" || typeof home !== "number" || away === home) return false;
-  return side === "away" ? away > home : home > away;
+function DateWheel({ selected, onSelect }: { selected: string; onSelect: (key: string) => void }) {
+  const scrollRef = useRef<ScrollView>(null);
+  const dates = useMemo(() => {
+    const today = new Date();
+    return Array.from({ length: 15 }, (_, i) => {
+      const d = new Date(today);
+      d.setDate(today.getDate() + i - 7);
+      return d;
+    });
+  }, []);
+
+  useEffect(() => {
+    const index = dates.findIndex((d) => dateKey(d) === selected);
+    if (index >= 0) {
+      requestAnimationFrame(() => scrollRef.current?.scrollTo({ x: Math.max(0, index * 82 - 123), animated: false }));
+    }
+  }, [dates, selected]);
+
+  return (
+    <View style={styles.wheelWrap}>
+      <View style={styles.wheelHeader}>
+        <Text style={styles.eyebrow}>КАЛЕНДАРЬ МАТЧЕЙ</Text>
+        <Text style={styles.wheelHint}>ЛИСТАЙ В СТОРОНЫ</Text>
+      </View>
+      <ScrollView
+        ref={scrollRef}
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        decelerationRate="fast"
+        snapToInterval={82}
+        snapToAlignment="center"
+        contentContainerStyle={styles.wheelContent}
+      >
+        {dates.map((d, i) => {
+          const key = dateKey(d);
+          const active = key === selected;
+          const delta = i - 7;
+          return (
+            <Pressable key={key} onPress={() => onSelect(key)} style={styles.dateSlot}>
+              <View style={[
+                styles.dateCard,
+                delta < 0 && styles.dateLeft,
+                delta > 0 && styles.dateRight,
+                active && styles.dateActive,
+              ]}>
+                <Text style={[styles.dateDay, active && styles.dateActiveText]}>{dayLabel(d)}</Text>
+                <Text style={[styles.dateNumber, active && styles.dateActiveText]}>{dateLabel(d)}</Text>
+                {active ? <View style={styles.dateIndicator} /> : null}
+              </View>
+            </Pressable>
+          );
+        })}
+      </ScrollView>
+    </View>
+  );
 }
 
 function MatchCard({ game, onPress }: { game: Game; onPress: () => void }) {
-  const scoreKnown = typeof game.awayTeam.score === "number" && typeof game.homeTeam.score === "number";
+  const away = game.awayTeam;
+  const home = game.homeTeam;
+  const final = ["FINAL", "OFF"].includes(game.gameState.toUpperCase());
+  const live = ["LIVE", "CRIT"].includes(game.gameState.toUpperCase());
+  const known = typeof away.score === "number" && typeof home.score === "number";
+  const awayWon = final && known && away.score! > home.score!;
+  const homeWon = final && known && home.score! > away.score!;
+
   return (
-    <Pressable style={styles.card} onPress={onPress}>
-      <View style={styles.glassSheen} pointerEvents="none" />
-      <View style={styles.splitBg} pointerEvents="none">
-        <View style={styles.splitHalfLeft}>
-          {game.awayTeam.logo ? <Image source={{ uri: game.awayTeam.logo }} style={styles.splitLogo} resizeMode="cover" /> : null}
-          <View style={[styles.splitTintLeft, isWinner(game, "away") && styles.winnerTint]} />
-        </View>
-        <View style={styles.splitHalfRight}>
-          {game.homeTeam.logo ? <Image source={{ uri: game.homeTeam.logo }} style={styles.splitLogo} resizeMode="cover" /> : null}
-          <View style={[styles.splitTintRight, isWinner(game, "home") && styles.winnerTint]} />
-        </View>
-        <View style={styles.splitDivider} />
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.matchCard, pressed && styles.cardPressed]}>
+      <View style={styles.matchTopline}>
+        <View style={[styles.statusDot, live && styles.statusLive, final && styles.statusFinal]} />
+        <Text style={[styles.matchStatus, live && styles.liveText]}>{stateLabel(game)}</Text>
+        <Text style={styles.matchTime}>{live ? "СЕЙЧАС" : final ? "ИТОГ" : gameTime(game)}</Text>
       </View>
-
-      <View style={styles.cardContent}>
-        <View style={styles.cardHead}>
-          <Text style={styles.state}>{formatGameState(game.gameState)}</Text>
-          <Text style={styles.time}>{formatTimeLocal(game.startTimeUTC)}</Text>
+      <View style={styles.matchBody}>
+        <View style={[styles.teamSide, awayWon && styles.winnerSide]}>
+          <TeamCrest abbrev={away.abbrev} logo={away.logo} />
+          <Text numberOfLines={1} style={styles.teamName}>{away.name}</Text>
+          <Text style={styles.teamCode}>{away.abbrev}</Text>
         </View>
-
-        <View style={styles.scoreRow}>
-          <View style={styles.teamCol}>
-            {game.awayTeam.logo ? <Image source={{ uri: game.awayTeam.logo }} style={styles.teamLogo} /> : null}
-            <Text style={styles.teamAbbrev}>{game.awayTeam.abbrev}</Text>
-            <Text style={styles.teamName} numberOfLines={1}>{game.awayTeam.name}</Text>
-          </View>
-          <View style={styles.scorePill}>
-            <Text style={styles.score}>
-              {scoreKnown ? `${game.awayTeam.score} : ${game.homeTeam.score}` : "- : -"}
-            </Text>
-          </View>
-          <View style={[styles.teamCol, styles.teamColRight]}>
-            {game.homeTeam.logo ? <Image source={{ uri: game.homeTeam.logo }} style={styles.teamLogo} /> : null}
-            <Text style={styles.teamAbbrev}>{game.homeTeam.abbrev}</Text>
-            <Text style={[styles.teamName, styles.teamNameRight]} numberOfLines={1}>{game.homeTeam.name}</Text>
-          </View>
+        <View style={styles.scoreBlock}>
+          <Text style={[styles.score, awayWon && styles.winnerScore]}>{known ? away.score : "—"}</Text>
+          <View style={styles.scoreDivider} />
+          <Text style={[styles.score, homeWon && styles.winnerScore]}>{known ? home.score : "—"}</Text>
         </View>
-
-        <Text style={styles.meta}>{game.venue ?? "Арена уточняется"} · броски {game.awayTeam.sog ?? "-"}:{game.homeTeam.sog ?? "-"}</Text>
-        <Text style={styles.mood}>{gameMood(game)}</Text>
+        <View style={[styles.teamSide, styles.teamRight, homeWon && styles.winnerSide]}>
+          <TeamCrest abbrev={home.abbrev} logo={home.logo} />
+          <Text numberOfLines={1} style={styles.teamName}>{home.name}</Text>
+          <Text style={styles.teamCode}>{home.abbrev}</Text>
+        </View>
+      </View>
+      <View style={styles.cardFooter}>
+        <Text style={styles.cardFooterText}>{game.venue || "NHL · REGULAR SEASON"}</Text>
+        <Text style={styles.detailsLink}>РАЗБОР МАТЧА ↗</Text>
       </View>
     </Pressable>
   );
@@ -103,126 +173,151 @@ function MatchCard({ game, onPress }: { game: Game; onPress: () => void }) {
 
 export default function HomeScreen() {
   const router = useRouter();
-  const [selected, setSelected] = useState(() => isoDate(new Date()));
+  const { width } = useWindowDimensions();
+  const [selected, setSelected] = useState(dateKey(new Date()));
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
 
-  const dates = useMemo(() => Array.from({ length: 9 }, (_, i) => addDays(selected, i - 4)), [selected]);
-
-  useEffect(() => {
-    let alive = true;
-    const load = async () => {
-      setLoading(true);
-      setError(null);
-      try {
-        const g = await getGamesByDate(selected);
-        if (alive) setGames(g);
-      } catch (e: any) {
-        if (alive) setError(e?.message ?? "Не удалось загрузить матчи");
-      } finally {
-        if (alive) setLoading(false);
-      }
-    };
-    void load();
-    return () => { alive = false; };
+  const load = useCallback(async (refresh = false) => {
+    if (refresh) setRefreshing(true);
+    else setLoading(true);
+    setError("");
+    try {
+      setGames(await getGamesByDate(selected));
+    } catch {
+      setGames([]);
+      setError("Не удалось получить расписание. Проверь подключение и попробуй ещё раз.");
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
   }, [selected]);
 
+  useEffect(() => { load(); }, [load]);
+
+  const selectedDate = useMemo(() => new Date(`${selected}T12:00:00`), [selected]);
+
   return (
-    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
-      <RinkBackground />
-      <View style={styles.topBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.datesRow}>
-          {dates.map((d) => {
-            const active = d === selected;
-            const dt = new Date(`${d}T12:00:00`);
-            const day = dt.toLocaleDateString("ru-RU", { weekday: "short" });
-            const num = dt.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
-            return (
-              <Pressable key={d} onPress={() => setSelected(d)} style={[styles.dateChip, d < selected ? styles.dateChipPrev : styles.dateChipNext, active && styles.dateChipActive]}>
-                <Text style={[styles.dateDay, active && styles.dateTextActive]}>{day}</Text>
-                <Text style={[styles.dateNum, active && styles.dateTextActive]}>{num}</Text>
-              </Pressable>
-            );
-          })}
-        </ScrollView>
-      </View>
-
-      <ScrollView contentContainerStyle={styles.content}>
-        <Text style={styles.title}>{humanDate(selected)}</Text>
-        <Text style={styles.lead}>Лента матчей, цифры и нормальный разбор - без казённого тона и одинаковых фраз.</Text>
-
-        {loading ? <ActivityIndicator color={colors.accent} style={{ marginTop: 24 }} /> : null}
-        {error ? <Text style={styles.error}>{error}</Text> : null}
-
-        {!loading && !error && games.length === 0 ? (
-          <View style={styles.empty}>
-            <Text style={styles.emptyTitle}>Пауза в календаре.</Text>
-            <Text style={styles.emptyText}>На эту дату игр нет. Лига взяла передышку, а мы - короткую паузу между сменами.</Text>
+    <SafeAreaView style={styles.safe} edges={["top"]}>
+      <ScrollView
+        style={styles.screen}
+        contentContainerStyle={[styles.content, { minHeight: "100%" }]}
+        showsVerticalScrollIndicator={false}
+        refreshControl={<RefreshControl refreshing={refreshing} onRefresh={() => load(true)} tintColor={C.ice} />}
+      >
+        <View style={styles.brandRow}>
+          <View>
+            <Text style={styles.brandOverline}>ХОККЕЙНЫЙ ДНЕВНИК</Text>
+            <Text style={styles.brand}>НХЛ<Text style={styles.brandDot}>.</Text></Text>
           </View>
-        ) : null}
+          <View style={styles.leagueBadge}>
+            <View style={styles.leagueBadgeDot} />
+            <Text style={styles.leagueBadgeText}>NHL 26/27</Text>
+          </View>
+        </View>
 
-        {games.map((g) => <MatchCard key={g.id} game={g} onPress={() => router.push(`/game/${g.id}`)} />)}
+        <DateWheel selected={selected} onSelect={setSelected} />
+
+        <View style={styles.sectionHeading}>
+          <View>
+            <Text style={styles.sectionKicker}>ВЫБРАННЫЙ ДЕНЬ</Text>
+            <Text style={styles.sectionTitle}>{fullDate(selectedDate)}</Text>
+          </View>
+          <Text style={styles.gamesCount}>{games.length.toString().padStart(2, "0")} ИГР</Text>
+        </View>
+
+        {loading ? (
+          <View style={styles.messageState}><ActivityIndicator size="large" color={C.ice} /><Text style={styles.messageText}>Загружаем лёд…</Text></View>
+        ) : error ? (
+          <Pressable style={styles.messageState} onPress={() => load()}><Text style={styles.errorTitle}>НЕ УДАЛОСЬ ОБНОВИТЬ</Text><Text style={styles.messageText}>{error}</Text><Text style={styles.retry}>ПОВТОРИТЬ</Text></Pressable>
+        ) : games.length === 0 ? (
+          <View style={styles.emptyState}>
+            <View style={styles.emptyPuck} />
+            <Text style={styles.emptyTitle}>Сегодня без вбрасываний</Text>
+            <Text style={styles.emptyText}>На выбранную дату матчей NHL не запланировано. Перелистни календарь, чтобы посмотреть соседние игровые дни.</Text>
+          </View>
+        ) : (
+          <View style={styles.gamesList}>
+            {games.map((game) => (
+              <MatchCard key={game.id} game={game} onPress={() => router.push(`/game/${game.id}`)} />
+            ))}
+          </View>
+        )}
+
+        <View style={styles.bottomNote}>
+          <View style={styles.bottomRule} />
+          <Text style={styles.bottomNoteText}>ИГРА. ЦИФРЫ. КОНТЕКСТ.</Text>
+        </View>
       </ScrollView>
     </SafeAreaView>
   );
 }
 
 const styles = StyleSheet.create({
-  safe: { flex: 1, backgroundColor: colors.bg },
-  rinkBackdrop: { ...StyleSheet.absoluteFillObject, alignItems: "center", justifyContent: "center", opacity: 0.42 },
-  rinkOuter: { width: "88%", height: "78%", borderRadius: 110, borderWidth: 5, borderColor: "rgba(195,218,235,0.22)", backgroundColor: "rgba(205,225,239,0.10)", overflow: "hidden" },
-  rinkCenterLine: { position: "absolute", top: "49.5%", left: 0, right: 0, height: 5, backgroundColor: "rgba(211,62,72,0.28)" },
-  rinkBlueLineTop: { position: "absolute", top: "29%", left: 0, right: 0, height: 4, backgroundColor: "rgba(70,135,190,0.28)" },
-  rinkBlueLineBottom: { position: "absolute", top: "68%", left: 0, right: 0, height: 4, backgroundColor: "rgba(70,135,190,0.28)" },
-  rinkCenterCircle: { position: "absolute", width: 150, height: 150, borderRadius: 75, borderWidth: 4, borderColor: "rgba(70,135,190,0.24)", alignSelf: "center", top: "42%" },
-  rinkFaceoff: { position: "absolute", width: 84, height: 84, borderRadius: 42, borderWidth: 3, borderColor: "rgba(211,62,72,0.22)" },
-  rinkFaceoffTL: { top: "10%", left: "12%" },
-  rinkFaceoffTR: { top: "10%", right: "12%" },
-  rinkFaceoffBL: { bottom: "10%", left: "12%" },
-  rinkFaceoffBR: { bottom: "10%", right: "12%" },
-  rinkGoalTop: { position: "absolute", top: 0, alignSelf: "center", width: 60, height: 28, borderWidth: 3, borderColor: "rgba(211,62,72,0.24)", borderTopWidth: 0, borderBottomLeftRadius: 10, borderBottomRightRadius: 10 },
-  rinkGoalBottom: { position: "absolute", bottom: 0, alignSelf: "center", width: 60, height: 28, borderWidth: 3, borderColor: "rgba(211,62,72,0.24)", borderBottomWidth: 0, borderTopLeftRadius: 10, borderTopRightRadius: 10 },
-  rinkShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(7,10,15,0.72)" },
-  topBar: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(11,15,20,0.35)" },
-  datesRow: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
-  dateChip: { minWidth: 72, height: 62, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: "rgba(255,255,255,0.07)", alignItems: "center", justifyContent: "center" },
-  dateChipPrev: { transform: [{ perspective: 500 }, { rotateY: "12deg" }], opacity: 0.82 },
-  dateChipNext: { transform: [{ perspective: 500 }, { rotateY: "-12deg" }], opacity: 0.82 },
-  dateChipActive: { backgroundColor: "rgba(190,39,49,0.94)", borderColor: "rgba(255,255,255,0.52)", borderBottomWidth: 4, borderBottomColor: "#ffb0b0", transform: [{ perspective: 700 }, { rotateX: "-8deg" }, { scale: 1.06 }], shadowColor: "#f04452", shadowOpacity: 0.62, shadowRadius: 15, shadowOffset: { width: 0, height: 7 }, elevation: 14 },
-  dateDay: { color: colors.muted, fontSize: 11, textTransform: "uppercase", fontWeight: "700" },
-  dateNum: { color: colors.text, fontSize: 14, fontWeight: "800", marginTop: 2 },
-  dateTextActive: { color: "#fff" },
-  content: { padding: 16, paddingBottom: 40 },
-  title: { color: colors.text, fontSize: 32, fontWeight: "900", marginTop: 6, textTransform: "capitalize" },
-  lead: { color: "rgba(238,244,251,0.72)", fontSize: 14, lineHeight: 21, marginTop: 8, marginBottom: 14, fontFamily: fonts.body },
-  error: { color: colors.loss, marginTop: 16 },
-  empty: { marginTop: 24, padding: 18, borderRadius: 20, backgroundColor: "rgba(255,255,255,0.08)", borderWidth: 1, borderColor: "rgba(255,255,255,0.12)" },
-  emptyTitle: { color: colors.text, fontSize: 20, fontWeight: "800" },
-  emptyText: { color: colors.muted, marginTop: 8, lineHeight: 21, fontFamily: fonts.body },
-  card: { borderRadius: 22, marginBottom: 14, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", backgroundColor: "rgba(255,255,255,0.08)" },
-  glassSheen: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(255,255,255,0.05)" },
-  splitBg: { ...StyleSheet.absoluteFill, flexDirection: "row" },
-  splitHalfLeft: { flex: 1, overflow: "hidden" },
-  splitHalfRight: { flex: 1, overflow: "hidden" },
-  splitLogo: { width: "180%", height: "180%", position: "absolute", left: "-40%", top: "-40%", opacity: 0.22 },
-  splitTintLeft: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(30,50,80,0.28)" },
-  splitTintRight: { ...StyleSheet.absoluteFill, backgroundColor: "rgba(70,30,30,0.22)" },
-  winnerTint: { backgroundColor: "rgba(190,24,36,0.76)", borderColor: "rgba(255,92,100,0.85)", borderWidth: 1, shadowColor: "#ff2638", shadowOpacity: 0.9, shadowRadius: 18, elevation: 12 },
-  splitDivider: { position: "absolute", left: "50%", top: 0, bottom: 0, width: 1, backgroundColor: "rgba(255,255,255,0.22)" },
-  cardContent: { padding: 14, backgroundColor: "rgba(10,14,20,0.18)" },
-  cardHead: { flexDirection: "row", justifyContent: "space-between", marginBottom: 10 },
-  state: { color: "#ffe0a3", fontSize: 11, fontWeight: "800", textTransform: "uppercase", letterSpacing: 0.5 },
-  time: { color: "rgba(238,244,251,0.75)", fontSize: 12, fontFamily: fonts.mono },
-  scoreRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", gap: 8 },
-  teamCol: { flex: 1, alignItems: "center" },
-  teamColRight: { alignItems: "center" },
-  teamLogo: { width: 44, height: 44, marginBottom: 4 },
-  teamAbbrev: { color: colors.text, fontSize: 22, fontWeight: "900", textShadowColor: "rgba(0,0,0,0.35)", textShadowOffset: { width: 0, height: 1 }, textShadowRadius: 4 },
-  teamName: { color: "rgba(238,244,251,0.78)", fontSize: 12, marginTop: 2, textAlign: "center" },
-  teamNameRight: { textAlign: "center" },
-  scorePill: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: 16, backgroundColor: "rgba(255,255,255,0.12)", borderWidth: 1, borderColor: "rgba(255,255,255,0.18)" },
-  score: { color: colors.text, fontSize: 28, fontWeight: "900", minWidth: 88, textAlign: "center", fontFamily: fonts.mono },
-  meta: { color: "rgba(238,244,251,0.72)", fontSize: 12, marginTop: 10 },
-  mood: { color: "#eef4fb", fontSize: 14, lineHeight: 21, marginTop: 8, fontFamily: fonts.body },
+  safe: { flex: 1, backgroundColor: C.bg },
+  screen: { flex: 1, backgroundColor: C.bg },
+  content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 38 },
+  brandRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 28 },
+  brandOverline: { color: C.muted, fontSize: 9, fontWeight: "800", letterSpacing: 2.5, marginBottom: 3 },
+  brand: { color: C.text, fontSize: 35, fontWeight: "900", letterSpacing: -1.8, lineHeight: 39 },
+  brandDot: { color: C.red },
+  leagueBadge: { flexDirection: "row", alignItems: "center", gap: 7, paddingHorizontal: 12, paddingVertical: 8, borderRadius: 30, borderWidth: 1, borderColor: C.stroke, backgroundColor: "rgba(255,255,255,0.025)" },
+  leagueBadgeDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.red },
+  leagueBadgeText: { color: "#BCC8D3", fontSize: 10, fontWeight: "800", letterSpacing: 1.1 },
+  wheelWrap: { marginHorizontal: -20, marginBottom: 28 },
+  wheelHeader: { paddingHorizontal: 20, flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 12 },
+  eyebrow: { color: C.muted, fontSize: 10, fontWeight: "800", letterSpacing: 1.7 },
+  wheelHint: { color: "#5F7182", fontSize: 8, fontWeight: "800", letterSpacing: 1.3 },
+  wheelContent: { paddingHorizontal: 20, alignItems: "center", gap: 0 },
+  dateSlot: { width: 82, height: 104, alignItems: "center", justifyContent: "center" },
+  dateCard: { width: 72, height: 84, borderRadius: 18, alignItems: "center", justifyContent: "center", backgroundColor: "#131D28", borderWidth: 1, borderColor: "rgba(220,235,248,0.08)", transform: [{ perspective: 500 }, { rotateY: "0deg" }], opacity: 0.78 },
+  dateLeft: { transform: [{ perspective: 500 }, { rotateY: "18deg" }, { scale: 0.91 }], marginRight: 4 },
+  dateRight: { transform: [{ perspective: 500 }, { rotateY: "-18deg" }, { scale: 0.91 }], marginLeft: 4 },
+  dateActive: { height: 96, width: 78, borderRadius: 20, backgroundColor: C.red, borderColor: "rgba(255,255,255,0.42)", borderBottomWidth: 4, borderBottomColor: "#F5A1A6", opacity: 1, transform: [{ perspective: 600 }, { rotateX: "-8deg" }, { scale: 1.04 }], shadowColor: C.red, shadowOpacity: 0.4, shadowRadius: 14, shadowOffset: { width: 0, height: 7 }, elevation: 10 },
+  dateDay: { color: "#8798A9", fontSize: 10, fontWeight: "800", letterSpacing: 1.2, marginBottom: 7 },
+  dateNumber: { color: "#E1E8EF", fontSize: 17, fontWeight: "800", letterSpacing: -0.4 },
+  dateActiveText: { color: "#FFFFFF" },
+  dateIndicator: { width: 13, height: 3, borderRadius: 2, backgroundColor: "#FFD7D8", marginTop: 8 },
+  sectionHeading: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-end", marginBottom: 15 },
+  sectionKicker: { color: C.ice, fontSize: 9, fontWeight: "900", letterSpacing: 2, marginBottom: 5 },
+  sectionTitle: { color: C.text, fontSize: Math.min(23, width * 0.058), fontWeight: "800", letterSpacing: -0.6, textTransform: "capitalize" },
+  gamesCount: { color: C.muted, fontSize: 10, fontWeight: "800", letterSpacing: 1.2, paddingBottom: 4 },
+  gamesList: { gap: 12 },
+  matchCard: { backgroundColor: C.surface, borderRadius: 22, borderWidth: 1, borderColor: C.stroke, overflow: "hidden" },
+  cardPressed: { opacity: 0.82, transform: [{ scale: 0.992 }] },
+  matchTopline: { flexDirection: "row", alignItems: "center", paddingHorizontal: 16, paddingTop: 14, paddingBottom: 8 },
+  statusDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: C.gold, marginRight: 8 },
+  statusLive: { backgroundColor: C.red },
+  statusFinal: { backgroundColor: "#7B91A3" },
+  matchStatus: { color: C.gold, fontSize: 9, fontWeight: "900", letterSpacing: 1.3 },
+  liveText: { color: "#FF727A" },
+  matchTime: { marginLeft: "auto", color: C.muted, fontSize: 10, fontWeight: "800", letterSpacing: 1.2 },
+  matchBody: { minHeight: 142, flexDirection: "row", alignItems: "center", paddingHorizontal: 10, paddingVertical: 8 },
+  teamSide: { flex: 1, alignItems: "center", justifyContent: "center", minWidth: 0, borderRadius: 15, paddingVertical: 7 },
+  teamRight: {},
+  winnerSide: { backgroundColor: "rgba(216,61,72,0.11)" },
+  crest: { alignItems: "center", justifyContent: "center", marginBottom: 5 },
+  crestFallback: { color: C.text, fontSize: 16, fontWeight: "900" },
+  teamName: { color: C.text, fontSize: 11, fontWeight: "800", textAlign: "center", maxWidth: "100%" },
+  teamCode: { color: C.muted, fontSize: 8, fontWeight: "800", letterSpacing: 1.4, marginTop: 3 },
+  scoreBlock: { width: 92, flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10 },
+  score: { color: "#D8E2EB", fontSize: 30, fontWeight: "900", letterSpacing: -1 },
+  winnerScore: { color: "#FFFFFF", textShadowColor: C.red, textShadowRadius: 12 },
+  scoreDivider: { width: 1, height: 27, backgroundColor: "rgba(255,255,255,0.15)" },
+  cardFooter: { minHeight: 36, flexDirection: "row", alignItems: "center", justifyContent: "space-between", paddingHorizontal: 16, borderTopWidth: 1, borderTopColor: C.stroke, backgroundColor: "rgba(255,255,255,0.018)" },
+  cardFooterText: { color: "#728394", fontSize: 9, fontWeight: "700", letterSpacing: 0.5, flex: 1 },
+  detailsLink: { color: C.ice, fontSize: 8, fontWeight: "900", letterSpacing: 1.1 },
+  messageState: { minHeight: 180, justifyContent: "center", alignItems: "center", padding: 24, gap: 12, backgroundColor: C.surface, borderRadius: 20, borderWidth: 1, borderColor: C.stroke },
+  messageText: { color: C.muted, fontSize: 13, textAlign: "center", lineHeight: 20 },
+  errorTitle: { color: "#FF858C", fontSize: 11, fontWeight: "900", letterSpacing: 1.5 },
+  retry: { color: C.ice, fontSize: 10, fontWeight: "900", letterSpacing: 1.5, marginTop: 6 },
+  emptyState: { minHeight: 230, borderRadius: 22, borderWidth: 1, borderColor: C.stroke, backgroundColor: C.surface, alignItems: "center", justifyContent: "center", paddingHorizontal: 30, paddingVertical: 26 },
+  emptyPuck: { width: 22, height: 7, borderRadius: 8, backgroundColor: "#7D8C99", marginBottom: 22, shadowColor: "#000", shadowOpacity: 0.8, shadowRadius: 8, elevation: 5 },
+  emptyTitle: { color: C.text, fontSize: 18, fontWeight: "800", marginBottom: 9, textAlign: "center" },
+  emptyText: { color: C.muted, fontSize: 12, lineHeight: 19, textAlign: "center" },
+  bottomNote: { alignItems: "center", marginTop: 34, gap: 12 },
+  bottomRule: { width: 36, height: 2, backgroundColor: C.red, borderRadius: 2 },
+  bottomNoteText: { color: "#506171", fontSize: 8, fontWeight: "900", letterSpacing: 2.5 },
 });
