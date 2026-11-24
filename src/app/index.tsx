@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import SvgUri from "react-native-svg";
+import { SvgUri } from "react-native-svg";
 import { Game, getGamesByDate } from "../lib/nhl";
 
 const C = {
@@ -84,12 +84,13 @@ function DateWheel({ selected, onSelect }: { selected: string; onSelect: (key: s
     });
   }, []);
 
+  const activeIndex = dates.findIndex((d) => dateKey(d) === selected);
+
   useEffect(() => {
-    const index = dates.findIndex((d) => dateKey(d) === selected);
-    if (index >= 0) {
-      requestAnimationFrame(() => scrollRef.current?.scrollTo({ x: Math.max(0, index * 82 - 123), animated: false }));
+    if (activeIndex >= 0) {
+      requestAnimationFrame(() => scrollRef.current?.scrollTo({ x: Math.max(0, activeIndex * 82 - 123), animated: false }));
     }
-  }, [dates, selected]);
+  }, [activeIndex]);
 
   return (
     <View style={styles.wheelWrap}>
@@ -109,7 +110,7 @@ function DateWheel({ selected, onSelect }: { selected: string; onSelect: (key: s
         {dates.map((d, i) => {
           const key = dateKey(d);
           const active = key === selected;
-          const delta = i - 7;
+          const delta = i - activeIndex;
           return (
             <Pressable key={key} onPress={() => onSelect(key)} style={styles.dateSlot}>
               <View style={[
