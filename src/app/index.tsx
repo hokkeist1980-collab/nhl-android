@@ -55,11 +55,9 @@ function stateLabel(game: Game) {
   return "СТАТУС УТОЧНЯЕТСЯ";
 }
 
-function TeamCrest({ abbrev, logo, size = 58 }: { abbrev: string; logo?: string; size?: number }) {
+function TeamCrest({ id, abbrev, logo, size = 58 }: { id: number; abbrev: string; logo?: string; size?: number }) {
   const [failed, setFailed] = useState(false);
-  const pngLogo = logo
-    ? logo.replace("/svg/", "/220x220/").replace(/_light\\.svg$/i, ".png").replace(/\\.svg$/i, ".png")
-    : "";
+  const pngLogo = id ? `https://sports.bzzoiro.com/img/hockey-team/${id}/` : "";
   return (
     <View style={[styles.crest, { width: size + 18, height: size + 18 }]}>
       {pngLogo && !failed ? (
@@ -186,7 +184,7 @@ function MatchCard({ game, onPress }: { game: Game; onPress: () => void }) {
       </View>
       <View style={styles.matchBody}>
         <View style={[styles.teamHalf, { backgroundColor: awayTint + "80" }]}>
-          <TeamCrest abbrev={away.abbrev} logo={away.logo} size={70} />
+          <TeamCrest id={away.id} abbrev={away.abbrev} logo={away.logo} size={70} />
           <Text numberOfLines={2} style={styles.teamName}>{away.name}</Text>
           <Text style={styles.teamCode}>{away.abbrev}</Text>
         </View>
@@ -195,7 +193,7 @@ function MatchCard({ game, onPress }: { game: Game; onPress: () => void }) {
           {live ? <Text style={styles.periodText}>ИДЁТ МАТЧ</Text> : null}
         </View>
         <View style={[styles.teamHalf, styles.teamHalfRight, { backgroundColor: homeTint + "80" }]}>
-          <TeamCrest abbrev={home.abbrev} logo={home.logo} size={70} />
+          <TeamCrest id={home.id} abbrev={home.abbrev} logo={home.logo} size={70} />
           <Text numberOfLines={2} style={styles.teamName}>{home.name}</Text>
           <Text style={styles.teamCode}>{home.abbrev}</Text>
         </View>
