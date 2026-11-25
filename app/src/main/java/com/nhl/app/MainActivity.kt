@@ -110,7 +110,7 @@ class MainActivity:ComponentActivity(){
  Canvas(modifier){
   val w=size.width;val h=size.height;val rw=w*.88f;val rh=h*.86f;val l=(w-rw)/2;val t=(h-rh)/2
   drawRect(Color(0xFF0C1118))
-  drawRoundRect(Color(0xFF141B24),androidx.compose.ui.geometry.Offset(l,t),androidx.compose.ui.geometry.Size(rw,rh),androidx.compose.ui.geometry.CornerRadius(rw*.16f),style=Stroke(5.dp.toPx(),Color(0xFF293440)))
+  drawRoundRect(Color(0xFF293440),androidx.compose.ui.geometry.Offset(l,t),androidx.compose.ui.geometry.Size(rw,rh),androidx.compose.ui.geometry.CornerRadius(rw*.16f),style=Stroke(width=5.dp.toPx()))
   listOf(.33f,.5f,.67f).forEachIndexed{i,v->drawLine(if(i==1)RED.copy(alpha=.25f)else Color(0xFF315A83).copy(alpha=.3f),androidx.compose.ui.geometry.Offset(l,t+rh*v),androidx.compose.ui.geometry.Offset(l+rw,t+rh*v),3.dp.toPx())}
   drawCircle(Color(0xFF31516D).copy(alpha=.2f),rw*.2f,androidx.compose.ui.geometry.Offset(w/2,h/2),style=Stroke(3.dp.toPx()))
  }
