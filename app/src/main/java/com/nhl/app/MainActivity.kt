@@ -322,7 +322,7 @@ fun fetchMatchReport(g:Game):MatchReport{
     val n=a.optJSONObject("name")?.optString("default")?:a.optString("name","")
     if(n.isNotBlank())assistNames.add(n)
    }
-   scorers.add("${p}-й период, ${time}: ${team} — ${name} (${strength})"+if(assistNames.isNotEmpty()) " · пас: "+assistNames.joinToString(", ") else ""
+   scorers.add("${p}-й период, ${time}: ${team} — ${name} (${strength})" + (if(assistNames.isNotEmpty()) " · пас: "+assistNames.joinToString(", ") else ""))
   }
  }
  val paragraphs=mutableListOf<String>()
