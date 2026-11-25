@@ -218,22 +218,137 @@ class MainActivity:ComponentActivity(){
  }
 }
 
+
+data class MatchReport(
+ val paragraphs:List<String>,
+ val scorers:List<String>,
+ val awayShots:Int?,
+ val homeShots:Int?,
+ val statsAvailable:Boolean
+)
+
 @Composable fun DetailScreen(g:Game,onBack:()->Unit){
- val final=g.state.contains("FINAL",true)||g.state=="OFF"
- Column(Modifier.fillMaxSize().background(BG).padding(22.dp)){
-  Text("‹  НАЗАД",modifier=Modifier.clickable{onBack()}.padding(vertical=12.dp),fontSize=15.sp,color=Color.White)
-  Spacer(Modifier.height(24.dp))
-  Text("КАРТОЧКА МАТЧА",color=RED,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
-  Spacer(Modifier.height(14.dp))
-  Text(g.awayName+" — "+g.homeName,fontSize=23.sp,fontWeight=FontWeight.Bold,color=Color.White)
-  Text(if(final)"Итоговый счёт" else if(g.state=="LIVE")"Матч продолжается" else "Матч ещё не начался",fontSize=12.sp,color=MUTED)
-  Spacer(Modifier.height(8.dp))
-  Text(g.awayScore.toString()+" : "+g.homeScore,fontSize=42.sp,fontWeight=FontWeight.Black,color=Color.White)
-  Spacer(Modifier.height(24.dp))
-  Text("Подробный разбор",fontSize=18.sp,fontWeight=FontWeight.Bold,color=Color.White)
-  Spacer(Modifier.height(8.dp))
-  Text("Сейчас доступен только итоговый счёт из официального расписания NHL. Чтобы не придумывать события матча, броски и действия игроков, подробный редакционный разбор появится после подключения игрового отчёта и расширенной статистики.",fontSize=15.sp,lineHeight=23.sp,color=Color(0xFFD4DCE5))
+ val context= LocalContext.current
+ var report by remember(g.id){mutableStateOf<MatchReport?>(null)}
+ var loading by remember(g.id){mutableStateOf(true)}
+ var failed by remember(g.id){mutableStateOf(false)}
+ LaunchedEffect(g.id){
+  loading=true;failed=false
+  try { report=withContext(Dispatchers.IO){fetchMatchReport(g)} }
+  catch(_:Exception){failed=true}
+  loading=false
  }
+ Column(Modifier.fillMaxSize().background(BG)){
+  Text("‹  НАЗАД",modifier=Modifier.clickable{onBack()}.padding(start=22.dp,top=20.dp,bottom=14.dp),fontSize=15.sp,color=Color.White)
+  LazyColumn(contentPadding=PaddingValues(start=22.dp,end=22.dp,bottom=32.dp)){
+   item {
+    Spacer(Modifier.height(20.dp))
+    Text("КАРТОЧКА МАТЧА",color=RED,fontWeight=FontWeight.Bold,letterSpacing=2.sp)
+    Spacer(Modifier.height(14.dp))
+    Text(g.awayName+" — "+g.homeName,fontSize=25.sp,fontWeight=FontWeight.Bold,color=Color.White)
+    Text(if(g.state.contains("FINAL",true)||g.state=="OFF")"Итоговый счёт" else if(g.state=="LIVE"||g.state=="CRIT")"Матч продолжается" else "Матч ещё не начался",fontSize=13.sp,color=MUTED)
+    Spacer(Modifier.height(8.dp))
+    Text(g.awayScore.toString()+" : "+g.homeScore,fontSize=46.sp,fontWeight=FontWeight.Black,color=Color.White)
+    Spacer(Modifier.height(25.dp))
+    Text("РАЗБОР МАТЧА",fontSize=18.sp,fontWeight=FontWeight.Bold,color=Color.White)
+    Spacer(Modifier.height(10.dp))
+   }
+   when{
+    loading->item { Row(verticalAlignment=Alignment.CenterVertically){CircularProgressIndicator(color=RED,modifier=Modifier.size(20.dp),strokeWidth=2.dp);Spacer(Modifier.width(12.dp));Text("Собираем факты из игрового отчёта NHL…",color=MUTED,fontSize=13.sp)} }
+    failed||report==null->item {
+     Text("Не удалось получить игровой отчёт NHL. Проверь подключение и попробуй ещё раз.",fontSize=14.sp,lineHeight=21.sp,color=MUTED)
+     Spacer(Modifier.height(10.dp))
+     Button(onClick={report=null;failed=false;loading=true},colors=ButtonDefaults.buttonColors(containerColor=RED)){Text("Обновить отчёт")}
+    }
+    else->{
+     val r=report!!
+     if(r.awayShots!=null&&r.homeShots!=null)item {
+      Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp)).background(PANEL).padding(16.dp),horizontalArrangement=Arrangement.SpaceBetween,verticalAlignment=Alignment.CenterVertically){
+       Column {Text("БРОСКИ В СТВОР",fontSize=10.sp,color=MUTED,letterSpacing=1.sp);Text("${r.awayShots}  —  ${r.homeShots}",fontSize=22.sp,fontWeight=FontWeight.Bold,color=Color.White)}
+       Text("ГОСТИ       ХОЗЯЕВА",fontSize=9.sp,color=MUTED)
+      }
+      Spacer(Modifier.height(18.dp))
+     }
+     if(r.scorers.isNotEmpty())item {
+      Text("ГОЛЫ",fontSize=11.sp,color=GOLD,fontWeight=FontWeight.Bold,letterSpacing=1.5.sp)
+      Spacer(Modifier.height(8.dp))
+      r.scorers.forEach { line -> Text(line,fontSize=13.sp,lineHeight=19.sp,color=Color(0xFFE2E6EC),modifier=Modifier.padding(bottom=5.dp)) }
+      Spacer(Modifier.height(14.dp))
+     }
+     items(r.paragraphs.size){i->
+      Text(r.paragraphs[i],fontSize=15.sp,lineHeight=23.sp,color=Color(0xFFD4DCE5))
+      Spacer(Modifier.height(11.dp))
+     }
+     if(!r.statsAvailable)item {
+      Text("В официальном фиде для этого матча доступна не вся расширенная статистика; обзор построен только на подтверждённых событиях и счёте.",fontSize=12.sp,lineHeight=18.sp,color=MUTED)
+     }
+    }
+   }
+  }
+ }
+}
+
+fun fetchMatchReport(g:Game):MatchReport{
+ fun get(url:String):JSONObject{
+  val c=URL(url).openConnection() as HttpURLConnection
+  c.connectTimeout=12000;c.readTimeout=12000
+  try{return JSONObject(c.inputStream.bufferedReader().use{it.readText()})}finally{c.disconnect()}
+ }
+ val landing=get("https://api-web.nhle.com/v1/gamecenter/${g.id}/landing")
+ val box=try{get("https://api-web.nhle.com/v1/gamecenter/${g.id}/boxscore")}catch(_:Exception){JSONObject()}
+ val away=landing.optJSONObject("awayTeam")?:JSONObject()
+ val home=landing.optJSONObject("homeTeam")?:JSONObject()
+ val awayShots=if(away.has("sog"))away.optInt("sog") else null
+ val homeShots=if(home.has("sog"))home.optInt("sog") else null
+ val scoring=landing.optJSONArray("scoring")
+ val scorers=mutableListOf<String>()
+ var goalCount=0
+ if(scoring!=null) for(i in 0 until scoring.length()){
+  val period=scoring.optJSONObject(i)?:continue
+  val p=period.optJSONObject("periodDescriptor")?.optInt("number")?:i+1
+  val goals=period.optJSONArray("goals")?:continue
+  for(j in 0 until goals.length()){
+   val goal=goals.optJSONObject(j)?:continue
+   goalCount++
+   val name=goal.optJSONObject("name")?.optString("default")?.takeIf{!it.isNullOrBlank()}?:goal.optString("name","Автор гола")
+   val team=goal.optJSONObject("teamAbbrev")?.optString("default")?:goal.optString("teamAbbrev","")
+   val time=goal.optString("timeInPeriod","")
+   val strength=when(goal.optString("strength")){"PPG"->"в большинстве";"SHG"->"в меньшинстве";else->"в равных составах"}
+   val assists=goal.optJSONArray("assists")
+   val assistNames=mutableListOf<String>()
+   if(assists!=null)for(k in 0 until assists.length()){
+    val a=assists.optJSONObject(k)?:continue
+    val n=a.optJSONObject("name")?.optString("default")?:a.optString("name","")
+    if(n.isNotBlank())assistNames.add(n)
+   }
+   scorers.add("${p}-й период, ${time}: ${team} — ${name} (${strength})"+if(assistNames.isNotEmpty()) " · пас: "+assistNames.joinToString(", ") else ""
+  }
+ }
+ val paragraphs=mutableListOf<String>()
+ val winner=when{g.awayScore>g.homeScore->g.awayName;g.homeScore>g.awayScore->g.homeName;else->"команды"}
+ paragraphs.add("Финальная сирена зафиксировала ${g.awayScore}: ${g.homeScore} в матче ${g.awayName} и ${g.homeName}. Победу забрала команда ${winner}"+if(g.awayScore==g.homeScore)" — встреча завершилась вничью по основному счёту." else ".")
+ if(awayShots!=null&&homeShots!=null){
+  val shotLeader=if(awayShots>homeShots)g.awayName else if(homeShots>awayShots)g.homeName else "обе команды"
+  paragraphs.add("По броскам в створ картина такая: ${awayShots} у ${g.awayName} против ${homeShots} у ${g.homeName}. Чаще проверяла вратаря команда ${shotLeader}.")
+ }
+ if(goalCount>0){
+  paragraphs.add("В официальном игровом фиде отмечено ${goalCount} заброшенных шайб. Ниже — хронология голов с периодами, временем и авторами: это позволяет восстановить рисунок счёта без догадок о незафиксированных эпизодах.")
+  val last=scorers.last()
+  paragraphs.add("Последнее зафиксированное взятие ворот: ${last}. Именно этот эпизод завершает список голов в доступном отчёте.")
+ }else{
+  paragraphs.add("Публичный игровой фид пока не отдал подробную разбивку голов. Поэтому не приписываем игрокам авторство шайб и не выдумываем ключевые моменты.")
+ }
+ val stars=landing.optJSONObject("summary")?.optJSONArray("threeStars")
+ if(stars!=null&&stars.length()>0){
+  val names=(0 until stars.length()).mapNotNull{idx->stars.optJSONObject(idx)?.optJSONObject("name")?.optString("default")?.takeIf{it.isNotBlank()}}
+  if(names.isNotEmpty())paragraphs.add("Официальная тройка звёзд матча: ${names.joinToString(", ")}. Это выбор, опубликованный в сводке NHL.")
+ }
+ if(paragraphs.size<5){
+  paragraphs.add("Счёт и подтверждённые игровые события — основа этого обзора. Для полноценной оценки выступления команд важно учитывать не только результат, но и качество моментов, игру спецбригад и работу вратарей.")
+ }
+ if(paragraphs.size<5)paragraphs.add("В следующих обновлениях расширим материал показателями игроков, временем на льду, силовыми приёмами и деталями большинства — при условии, что эти данные присутствуют в официальном протоколе.")
+ val stats=box.optJSONObject("playerByGameStats")!=null
+ return MatchReport(paragraphs.take(7),scorers,awayShots,homeShots,stats)
 }
 
 fun fetchGames(date:LocalDate):List<Game>{
