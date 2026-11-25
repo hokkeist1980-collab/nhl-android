@@ -20,7 +20,7 @@
     "android": {
       "package": "com.hokke.nhlbox",
       "adaptiveIcon": {
-        "backgroundColor": "#0b0f14",
+        "backgroundColor": "#18D927",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
