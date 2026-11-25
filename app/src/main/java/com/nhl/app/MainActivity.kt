@@ -34,6 +34,7 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.delay
 import org.json.JSONObject
 import java.net.HttpURLConnection
 import java.net.URL
@@ -66,8 +67,24 @@ class MainActivity:ComponentActivity(){
  var detail by remember { mutableStateOf<Game?>(null) }
  var retry by remember { mutableIntStateOf(0) }
  LaunchedEffect(date,retry){
-  loading=true;error=false
-  try { games=withContext(Dispatchers.IO){fetchGames(date)} } catch(_:Exception){games=emptyList();error=true}
+  // Wait until the user finishes the 3D date-wheel swipe before requesting the NHL API.
+  delay(350)
+  loading=true
+  error=false
+  var loaded: List<Game>? = null
+  var lastError: Exception? = null
+  for(attempt in 0..2){
+   try {
+    loaded=withContext(Dispatchers.IO){fetchGames(date)}
+    lastError=null
+    break
+   } catch(e:Exception){
+    lastError=e
+    if(attempt<2) delay(650L*(attempt+1))
+   }
+  }
+  if(loaded!=null){games=loaded;error=false}
+  else {games=emptyList();error=true}
   loading=false
  }
  MaterialTheme(colorScheme=darkColorScheme(background=BG,surface=PANEL,primary=RED,onSurface=Color.White)){
