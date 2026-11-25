@@ -1,7 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { SvgUri } from "react-native-svg";
 import { useLocalSearchParams } from "expo-router";
 import { getGameDetails, type GameDetails, type SkaterLine } from "../../lib/nhl";
 
@@ -11,10 +10,8 @@ const C = {
   red: "#D83D48", ice: "#9CC8E8", gold: "#E8C88A",
 };
 
-function Crest({ abbrev, logo }: { abbrev: string; logo?: string }) {
-  const [failed, setFailed] = useState(false);
-  const uri = logo || `https://assets.nhle.com/logos/nhl/svg/${abbrev}_light.svg`;
-  return <View style={styles.crest}>{uri && !failed ? <SvgUri uri={uri} width={66} height={66} onError={() => setFailed(true)} /> : <Text style={styles.crestFallback}>{abbrev}</Text>}</View>;
+function Crest({ abbrev }: { abbrev: string; logo?: string }) {
+  return <View style={styles.crest}><Text style={styles.crestFallback}>{abbrev}</Text></View>;
 }
 
 function total(players: SkaterLine[], key: "hits" | "pim" | "sog") {
