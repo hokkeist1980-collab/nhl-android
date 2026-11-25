@@ -232,7 +232,8 @@ data class MatchReport(
  var report by remember(g.id){mutableStateOf<MatchReport?>(null)}
  var loading by remember(g.id){mutableStateOf(true)}
  var failed by remember(g.id){mutableStateOf(false)}
- LaunchedEffect(g.id){
+ var retryReport by remember(g.id){mutableIntStateOf(0)}
+ LaunchedEffect(g.id,retryReport){
   loading=true;failed=false
   try { report=withContext(Dispatchers.IO){fetchMatchReport(g)} }
   catch(_:Exception){failed=true}
@@ -258,7 +259,7 @@ data class MatchReport(
     failed||report==null->item {
      Text("Не удалось получить игровой отчёт NHL. Проверь подключение и попробуй ещё раз.",fontSize=14.sp,lineHeight=21.sp,color=MUTED)
      Spacer(Modifier.height(10.dp))
-     Button(onClick={report=null;failed=false;loading=true},colors=ButtonDefaults.buttonColors(containerColor=RED)){Text("Обновить отчёт")}
+     Button(onClick={retryReport++},colors=ButtonDefaults.buttonColors(containerColor=RED)){Text("Обновить отчёт")}
     }
     else->{
      val r=report!!
