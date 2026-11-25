@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
-  ImageBackground,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -12,7 +11,6 @@ import {
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
-import { SvgUri } from "react-native-svg";
 import { Game, getGamesByDate } from "../lib/nhl";
 
 const C = {
@@ -55,21 +53,10 @@ function stateLabel(game: Game) {
   return "СТАТУС УТОЧНЯЕТСЯ";
 }
 
-function TeamCrest({ abbrev, logo, size = 58 }: { abbrev: string; logo?: string; size?: number }) {
-  const [failed, setFailed] = useState(false);
-  const source = logo || `https://assets.nhle.com/logos/nhl/svg/${abbrev}_light.svg`;
+function TeamCrest({ abbrev, size = 58 }: { abbrev: string; logo?: string; size?: number }) {
   return (
     <View style={[styles.crest, { width: size + 18, height: size + 18 }]}>
-      {source && !failed ? (
-        <SvgUri
-          uri={source}
-          width={size}
-          height={size}
-          onError={() => setFailed(true)}
-        />
-      ) : (
-        <Text style={styles.crestFallback}>{abbrev}</Text>
-      )}
+      <Text style={styles.crestFallback}>{abbrev}</Text>
     </View>
   );
 }
@@ -209,8 +196,6 @@ export default function HomeScreen() {
 
   return (
     <SafeAreaView style={styles.safe} edges={["top"]}>
-      <ImageBackground source={{ uri: "https://images.pexels.com/photos/6539276/pexels-photo-6539276.jpeg?auto=compress&cs=tinysrgb&w=1200" }} resizeMode="cover" style={StyleSheet.absoluteFillObject} />
-      <View style={styles.scrim} />
       <ScrollView
         style={styles.screen}
         contentContainerStyle={[styles.content, { minHeight: "100%" }]}
@@ -267,7 +252,6 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: C.bg },
-  scrim: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(5,10,16,0.84)" },
   screen: { flex: 1, backgroundColor: "transparent" },
   content: { paddingHorizontal: 20, paddingTop: 14, paddingBottom: 38 },
   brandRow: { flexDirection: "row", alignItems: "center", justifyContent: "space-between", marginBottom: 28 },
