@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Animated,
+  Image,
   Pressable,
   RefreshControl,
   ScrollView,
@@ -54,10 +55,18 @@ function stateLabel(game: Game) {
   return "СТАТУС УТОЧНЯЕТСЯ";
 }
 
-function TeamCrest({ abbrev, size = 58 }: { abbrev: string; logo?: string; size?: number }) {
+function TeamCrest({ abbrev, logo, size = 58 }: { abbrev: string; logo?: string; size?: number }) {
+  const [failed, setFailed] = useState(false);
+  const pngLogo = logo
+    ? logo.replace("/svg/", "/220x220/").replace(/_light\\.svg$/i, ".png").replace(/\\.svg$/i, ".png")
+    : "";
   return (
     <View style={[styles.crest, { width: size + 18, height: size + 18 }]}>
-      <Text style={styles.crestFallback}>{abbrev}</Text>
+      {pngLogo && !failed ? (
+        <Image source={{ uri: pngLogo }} style={{ width: size, height: size }} resizeMode="contain" onError={() => setFailed(true)} />
+      ) : (
+        <Text style={styles.crestFallback}>{abbrev}</Text>
+      )}
     </View>
   );
 }
