@@ -13,6 +13,6 @@ export const colors = {
 };
 
 export const fonts = {
-  body: "serif",
-  mono: "monospace",
+  body: "sans-serif",
+  mono: "sans-serif",
 };
