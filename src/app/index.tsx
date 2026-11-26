@@ -1,10 +1,11 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ActivityIndicator, Animated, Image, Pressable, RefreshControl,
+  ActivityIndicator, Animated, Pressable, RefreshControl,
   ScrollView, StyleSheet, Text, View, useWindowDimensions,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
+import { SvgUri } from "react-native-svg";
 import { Game, getGamesByDate } from "../lib/nhl";
 
 const C = {
@@ -42,7 +43,7 @@ function DateWheel({selected,onSelect}:{selected:string;onSelect:(key:string)=>v
   const {width}=useWindowDimensions();
   const dates=useMemo(()=>Array.from({length:15},(_,i)=>{const d=new Date();d.setDate(d.getDate()+i-7);return d;}),[]);
   const active=dates.findIndex(d=>dateKey(d)===selected);
-  useEffect(()=>{if(active>=0) requestAnimationFrame(()=>ref.current?.scrollTo({x:Math.max(0,active*82-(width-82)/2),animated:false}));},[active,width]);
+  useEffect(()=>{if(active>=0) requestAnimationFrame(()=>ref.current?.scrollTo({x:Math.max(0,active*82),animated:false}));},[active,width]);
   return <View style={styles.wheelWrap}>
     <View style={styles.wheelHeader}><Text style={styles.eyebrow}>КАЛЕНДАРЬ МАТЧЕЙ</Text><Text style={styles.wheelHint}>ЛИСТАЙ В СТОРОНЫ</Text></View>
     <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" snapToInterval={82} snapToAlignment="start"
