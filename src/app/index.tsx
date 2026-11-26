@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
@@ -106,9 +106,19 @@ export default function HomeScreen() {
   const [selected, setSelected] = useState(() => isoDate(new Date()));
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(  const today = useMemo(() => isoDate(new Date()), []);
+  const dates = useMemo(() => Array.from({ length: 91 }, (_, i) => addDays(today, i - 45)), [today]);
+  const dateScroll = useRef<ScrollView>(null);
+  const selectedIndex = Math.max(0, dates.indexOf(selected));
+  const dateStep = 84;
+  const dateSidePadding = 24;
 
-  const dates = useMemo(() => Array.from({ length: 9 }, (_, i) => addDays(selected, i - 4)), [selected]);
+  useEffect(() => {
+    const index = dates.indexOf(selected);
+    if (index >= 0) {
+      requestAnimationFrame(() => dateScroll.current?.scrollTo({ x: index * dateStep, animated: true }));
+    }
+  }, [selected, dates]);ected]);
 
   useEffect(() => {
     let alive = true;
@@ -132,14 +142,38 @@ export default function HomeScreen() {
     <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
       <RinkBackground />
       <View style={styles.topBar}>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.datesRow}>
-          {dates.map((d) => {
+        <ScrollView
+          ref={dateScroll}
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={[styles.datesRow, { paddingHorizontal: dateSidePadding }]}
+          snapToInterval={dateStep}
+          snapToAlignment="start"
+          decelerationRate="fast"
+          disableIntervalMomentum
+          onMomentumScrollEnd={(event) => {
+            const index = Math.max(0, Math.min(dates.length - 1, Math.round(event.nativeEvent.contentOffset.x / dateStep)));
+            if (dates[index] && dates[index] !== selected) setSelected(dates[index]);
+          }}
+        >
+          {dates.map((d, index) => {
             const active = d === selected;
+            const distance = Math.abs(index - selectedIndex);
             const dt = new Date(`${d}T12:00:00`);
             const day = dt.toLocaleDateString("ru-RU", { weekday: "short" });
             const num = dt.toLocaleDateString("ru-RU", { day: "2-digit", month: "2-digit" });
+            const depthScale = distance === 0 ? 1.08 : distance === 1 ? 0.96 : distance === 2 ? 0.86 : 0.78;
+            const depthOpacity = distance === 0 ? 1 : distance === 1 ? 0.82 : distance === 2 ? 0.58 : 0.38;
             return (
-              <Pressable key={d} onPress={() => setSelected(d)} style={[styles.dateChip, d < selected ? styles.dateChipPrev : styles.dateChipNext, active && styles.dateChipActive]}>
+              <Pressable
+                key={d}
+                onPress={() => setSelected(d)}
+                style={[
+                  styles.dateChip,
+                  { width: 76, marginRight: 8, opacity: depthOpacity, transform: [{ scale: depthScale }] },
+                  active && styles.dateChipActive,
+                ]}
+              >
                 <Text style={[styles.dateDay, active && styles.dateTextActive]}>{day}</Text>
                 <Text style={[styles.dateNum, active && styles.dateTextActive]}>{num}</Text>
               </Pressable>
@@ -185,11 +219,11 @@ const styles = StyleSheet.create({
   rinkGoalBottom: { position: "absolute", bottom: 0, alignSelf: "center", width: 60, height: 28, borderWidth: 3, borderColor: "rgba(211,62,72,0.24)", borderBottomWidth: 0, borderTopLeftRadius: 10, borderTopRightRadius: 10 },
   rinkShade: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(7,10,15,0.72)" },
   topBar: { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: "rgba(255,255,255,0.08)", backgroundColor: "rgba(11,15,20,0.35)" },
-  datesRow: { paddingHorizontal: 12, paddingVertical: 10, gap: 8 },
-  dateChip: { minWidth: 72, height: 62, paddingVertical: 8, paddingHorizontal: 10, borderRadius: 16, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)", backgroundColor: "rgba(255,255,255,0.07)", alignItems: "center", justifyContent: "center" },
-  dateChipPrev: { transform: [{ perspective: 500 }, { rotateY: "12deg" }], opacity: 0.82 },
-  dateChipNext: { transform: [{ perspective: 500 }, { rotateY: "-12deg" }], opacity: 0.82 },
-  dateChipActive: { backgroundColor: "rgba(190,39,49,0.94)", borderColor: "rgba(255,255,255,0.52)", borderBottomWidth: 4, borderBottomColor: "#ffb0b0", transform: [{ perspective: 700 }, { rotateX: "-8deg" }, { scale: 1.06 }], shadowColor: "#f04452", shadowOpacity: 0.62, shadowRadius: 15, shadowOffset: { width: 0, height: 7 }, elevation: 14 },
+  datesRow: { paddingVertical: 14, alignItems: "center" },
+  dateChip: { height: 72, paddingVertical: 10, paddingHorizontal: 8, borderRadius: 22, borderWidth: 1, borderColor: "rgba(255,255,255,0.10)", backgroundColor: "rgba(30,39,53,0.88)", alignItems: "center", justifyContent: "center" },
+  dateChipPrev: {},
+  dateChipNext: {},
+  dateChipActive: { backgroundColor: "rgba(190,39,49,0.96)", borderColor: "rgba(255,255,255,0.58)", borderBottomWidth: 3, borderBottomColor: "#ffb0b0", shadowColor: "#f04452", shadowOpacity: 0.48, shadowRadius: 18, shadowOffset: { width: 0, height: 8 }, elevation: 12 },
   dateDay: { color: colors.muted, fontSize: 11, textTransform: "uppercase", fontWeight: "700" },
   dateNum: { color: colors.text, fontSize: 14, fontWeight: "800", marginTop: 2 },
   dateTextActive: { color: "#fff" },
