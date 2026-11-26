@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ActivityIndicator, Image, Pressable, ScrollView, StyleSheet, Text, View, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { colors, fonts } from "../theme";
@@ -103,6 +103,7 @@ function MatchCard({ game, onPress }: { game: Game; onPress: () => void }) {
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { width: screenWidth } = useWindowDimensions();
   const [selected, setSelected] = useState(() => isoDate(new Date()));
   const [games, setGames] = useState<Game[]>([]);
   const [loading, setLoading] = useState(true);
@@ -111,7 +112,7 @@ export default function HomeScreen() {
   const dateScroll = useRef<ScrollView>(null);
   const selectedIndex = Math.max(0, dates.indexOf(selected));
   const dateStep = 84;
-  const dateSidePadding = 24;
+  const dateSidePadding = Math.max(0, (screenWidth - 76) / 2);
 
   useEffect(() => {
     const index = dates.indexOf(selected);
