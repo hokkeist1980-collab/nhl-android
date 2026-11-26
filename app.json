@@ -21,8 +21,7 @@
       "package": "com.hokke.nhlbox",
       "adaptiveIcon": {
         "backgroundColor": "#18D927",
-        "foregroundImage": "./assets/android-icon-foreground.png",
-        "monochromeImage": "./assets/android-icon-monochrome.png"
+        "foregroundImage": "./assets/android-icon-foreground.png"
       },
       "predictiveBackGestureEnabled": false
     },
