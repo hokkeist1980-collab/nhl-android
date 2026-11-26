@@ -123,7 +123,7 @@ export default function HomeScreen() {
   return <SafeAreaView style={styles.safe} edges={["top"]}>
     <ScrollView showsVerticalScrollIndicator={false} refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor={C.ice}/>}>
       <View style={styles.header}>
-        <View style={styles.brandIcon}><Text style={styles.brandN}>N</Text><Text style={styles.brandHL}>HL</Text></View>
+        <View style={styles.brandIcon}><Text style={styles.brandWord}>NHL</Text></View>
         <View style={styles.brandCopy}><Text style={styles.brandTitle}>НХЛ</Text><Text style={styles.brandSub}>МАТЧИ  ·  РЕЗУЛЬТАТЫ  ·  АНАЛИТИКА</Text></View>
       </View>
       <DateWheel selected={selected} onSelect={setSelected}/>
@@ -141,8 +141,7 @@ const styles=StyleSheet.create({
  safe:{flex:1,backgroundColor:C.bg},
  header:{flexDirection:"row",alignItems:"center",paddingHorizontal:22,paddingTop:18,paddingBottom:16,gap:14},
  brandIcon:{width:54,height:54,borderRadius:17,backgroundColor:"#18D927",alignItems:"center",justifyContent:"center",overflow:"hidden"},
- brandN:{position:"absolute",fontSize:29,fontWeight:"900",color:"#07110A",transform:[{rotate:"-28deg"},{translateX:-4},{translateY:-5}]},
- brandHL:{fontSize:18,fontWeight:"900",color:"#07110A",transform:[{rotate:"-28deg"},{translateX:5},{translateY:6}]},
+ brandWord:{fontSize:25,fontWeight:"900",fontStyle:"italic",letterSpacing:-1.5,color:"#07110A",transform:[{rotate:"-25deg"}]},
  brandCopy:{flex:1},brandTitle:{fontSize:34,color:C.text,fontWeight:"300",letterSpacing:1},brandSub:{fontSize:9,color:C.muted,letterSpacing:1.6,marginTop:4},
  wheelWrap:{paddingTop:10,paddingBottom:12,backgroundColor:"#0A1017"},
  wheelHeader:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:22,paddingBottom:12},
