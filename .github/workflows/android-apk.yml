@@ -1,4 +1,5 @@
 name: Build Android APK
+# CI refresh: 2026-11-26
 
 on:
   workflow_dispatch:
