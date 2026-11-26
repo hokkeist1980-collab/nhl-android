@@ -40,22 +40,68 @@ function stateLabel(game: Game) {
 function DateWheel({selected,onSelect}:{selected:string;onSelect:(key:string)=>void}) {
   const ref=useRef<ScrollView>(null);
   const {width}=useWindowDimensions();
-  const dates=useMemo(()=>Array.from({length:91},(_,i)=>{const d=new Date();d.setHours(12,0,0,0);d.setDate(d.getDate()+i-45);return d;}),[]);
+  const scrollX=useRef(new Animated.Value(0)).current;
+  const ITEM_WIDTH=92;
+  const dates=useMemo(()=>Array.from({length:91},(_,i)=>{
+    const d=new Date();
+    d.setHours(12,0,0,0);
+    d.setDate(d.getDate()+i-45);
+    return d;
+  }),[]);
   const active=dates.findIndex(d=>dateKey(d)===selected);
-  useEffect(()=>{if(active>=0) requestAnimationFrame(()=>ref.current?.scrollTo({x:Math.max(0,active*82-(width-82)/2),animated:false}));},[active,width]);
+
+  // The selected item is centered when its scroll offset equals index * ITEM_WIDTH.
+  // Horizontal content padding supplies the half-screen space around the first/last item.
+  useEffect(()=>{
+    if(active>=0) requestAnimationFrame(()=>{
+      ref.current?.scrollTo({x:active*ITEM_WIDTH,animated:false});
+      scrollX.setValue(active*ITEM_WIDTH);
+    });
+  },[active,width,scrollX]);
+
   return <View style={styles.wheelWrap}>
-    <View style={styles.wheelHeader}><Text style={styles.eyebrow}>КАЛЕНДАРЬ МАТЧЕЙ</Text><Text style={styles.wheelHint}>ЛИСТАЙ В СТОРОНЫ</Text></View>
-    <ScrollView ref={ref} horizontal showsHorizontalScrollIndicator={false} decelerationRate="fast" snapToInterval={82} snapToAlignment="start"
-      contentContainerStyle={[styles.wheelContent,{paddingHorizontal:Math.max(0,(width-82)/2)}]}
-      onMomentumScrollEnd={e=>{const i=Math.max(0,Math.min(dates.length-1,Math.round(e.nativeEvent.contentOffset.x/82)));onSelect(dateKey(dates[i]));}}>
-      {dates.map((d,i)=>{const key=dateKey(d),isActive=key===selected,delta=i-active;return <Pressable key={key} onPress={()=>onSelect(key)} style={styles.dateSlot}>
-        <View style={[styles.dateCard,delta<0&&styles.dateLeft,delta>0&&styles.dateRight,isActive&&styles.dateActive]}>
-          <Text style={[styles.dateDay,isActive&&styles.dateActiveText]}>{dayLabel(d)}</Text>
-          <Text style={[styles.dateNumber,isActive&&styles.dateActiveText]}>{dateLabel(d)}</Text>
-          {isActive?<View style={styles.dateIndicator}/>:null}
-        </View>
-      </Pressable>;})}
-    </ScrollView>
+    <View style={styles.wheelHeader}>
+      <Text style={styles.eyebrow}>КАЛЕНДАРЬ МАТЧЕЙ</Text>
+      <Text style={styles.wheelHint}>ЛИСТАЙ В СТОРОНЫ</Text>
+    </View>
+    <Animated.ScrollView
+      ref={ref}
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      decelerationRate="fast"
+      snapToInterval={ITEM_WIDTH}
+      snapToAlignment="start"
+      scrollEventThrottle={16}
+      contentContainerStyle={[styles.wheelContent,{paddingHorizontal:Math.max(0,(width-ITEM_WIDTH)/2)}]}
+      onScroll={Animated.event(
+        [{nativeEvent:{contentOffset:{x:scrollX}}}],
+        {useNativeDriver:true}
+      )}
+      onMomentumScrollEnd={e=>{
+        const i=Math.max(0,Math.min(dates.length-1,Math.round(e.nativeEvent.contentOffset.x/ITEM_WIDTH)));
+        onSelect(dateKey(dates[i]));
+      }}
+    >
+      {dates.map((d,i)=>{
+        const key=dateKey(d),isActive=key===selected;
+        const inputRange=[(i-1)*ITEM_WIDTH,i*ITEM_WIDTH,(i+1)*ITEM_WIDTH];
+        const scale=scrollX.interpolate({inputRange,outputRange:[0.78,1,0.78],extrapolate:"clamp"});
+        const opacity=scrollX.interpolate({inputRange,outputRange:[0.42,1,0.42],extrapolate:"clamp"});
+        const rotateY=scrollX.interpolate({inputRange,outputRange:["-32deg","0deg","32deg"],extrapolate:"clamp"});
+        const translateY=scrollX.interpolate({inputRange,outputRange:[7,0,7],extrapolate:"clamp"});
+        return <Pressable key={key} onPress={()=>onSelect(key)} style={styles.dateSlot}>
+          <Animated.View style={[
+            styles.dateCard,
+            {opacity,transform:[{perspective:700},{rotateY},{scale},{translateY}]},
+            isActive&&styles.dateActive
+          ]}>
+            <Text style={[styles.dateDay,isActive&&styles.dateActiveText]}>{dayLabel(d)}</Text>
+            <Text style={[styles.dateNumber,isActive&&styles.dateActiveText]}>{dateLabel(d)}</Text>
+            {isActive?<View style={styles.dateIndicator}/>:null}
+          </Animated.View>
+        </Pressable>;
+      })}
+    </Animated.ScrollView>
   </View>;
 }
 
