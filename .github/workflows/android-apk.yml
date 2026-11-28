@@ -16,7 +16,7 @@ on:
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 45
 
     steps:
       - name: Checkout
@@ -25,7 +25,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 22
           cache: npm
 
       - name: Setup Java
@@ -40,12 +40,58 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: TypeScript validation
+        run: npm run typecheck
+
       - name: Expo prebuild (Android)
         run: npx expo prebuild --platform android --no-install
 
       - name: Build release APK
         working-directory: android
         run: chmod +x gradlew && ./gradlew assembleRelease
+
+      - name: Android emulator launch and carousel swipe smoke test
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 35
+          target: google_apis
+          arch: x86_64
+          profile: pixel_7_pro
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim -camera-back none
+          disable-animations: false
+          script: |
+            set -euo pipefail
+            adb install -r android/app/build/outputs/apk/release/app-release.apk
+            adb shell am force-stop com.hokke.nhlbox
+            adb shell monkey -p com.hokke.nhlbox 1
+            sleep 18
+            PID="$(adb shell pidof -s com.hokke.nhlbox | tr -d '\r')"
+            if [ -z "$PID" ]; then
+              echo "NHL app process exited after launch"
+              adb logcat -d -t 3000
+              exit 1
+            fi
+            adb shell input swipe 1250 620 180 620 650
+            sleep 3
+            PID="$(adb shell pidof -s com.hokke.nhlbox | tr -d '\r')"
+            if [ -z "$PID" ]; then
+              echo "NHL app process exited after date carousel swipe"
+              adb logcat -d -t 3000
+              exit 1
+            fi
+            if adb logcat -d --pid="$PID" -t 3000 | grep -Eq 'FATAL EXCEPTION|ReactNativeJS.*(Error|Exception)'; then
+              echo "Runtime error detected after launching or swiping the date carousel"
+              exit 1
+            fi
+            mkdir -p artifacts
+            adb exec-out screencap -p > artifacts/emulator-carousel.png
+
+      - name: Upload emulator screenshot
+        uses: actions/upload-artifact@v7
+        with:
+          name: nhl-emulator-carousel-smoke-test
+          path: artifacts/emulator-carousel.png
+          if-no-files-found: error
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v7
