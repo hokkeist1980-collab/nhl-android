@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ComponentRef } from "react";
 import {
   ActivityIndicator, Animated, Image, Pressable, RefreshControl,
   ScrollView, StyleSheet, Text, View, useWindowDimensions,
@@ -38,7 +38,7 @@ function stateLabel(game: Game) {
 }
 
 function DateWheel({selected,onSelect}:{selected:string;onSelect:(key:string)=>void}) {
-  const ref=useRef<ScrollView>(null);
+  const ref=useRef<ComponentRef<typeof Animated.ScrollView>>(null);
   const {width}=useWindowDimensions();
   const scrollX=useRef(new Animated.Value(0)).current;
   const ITEM_WIDTH=92;
@@ -111,7 +111,7 @@ function DateWheel({selected,onSelect}:{selected:string;onSelect:(key:string)=>v
         });
         const lift=scrollX.interpolate({
           inputRange,
-          outputRange:[9,7,4,1,-5,1,4,7,9],
+          outputRange:[16,13,7,0,-9,0,7,13,16],
           extrapolate:"clamp"
         });
         return <Pressable key={key} onPress={()=>selectDate(i)} style={styles.dateSlot}>
