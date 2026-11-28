@@ -41,7 +41,7 @@ function DateWheel({selected,onSelect}:{selected:string;onSelect:(key:string)=>v
   const ref=useRef<ComponentRef<typeof Animated.ScrollView>>(null);
   const {width}=useWindowDimensions();
   const scrollX=useRef(new Animated.Value(0)).current;
-  const ITEM_WIDTH=92;
+  const ITEM_WIDTH=80;
   const dates=useMemo(()=>Array.from({length:91},(_,i)=>{
     const d=new Date();
     d.setHours(12,0,0,0);
@@ -217,12 +217,12 @@ const styles=StyleSheet.create({
  wheelWrap:{paddingTop:10,paddingBottom:12,backgroundColor:"#0A1017"},
  wheelHeader:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:22,paddingBottom:12},
  eyebrow:{color:C.muted,fontSize:10,fontWeight:"800",letterSpacing:1.7},wheelHint:{color:"#5F6F80",fontSize:8,letterSpacing:1.2},
- wheelContent:{alignItems:"center",paddingVertical:20},dateSlot:{width:92,alignItems:"center"},
- dateCard:{width:72,height:116,borderRadius:28,backgroundColor:"#17212D",alignItems:"center",justifyContent:"center",gap:12,borderWidth:1,borderColor:"rgba(255,255,255,0.025)"},
+ wheelContent:{alignItems:"center",paddingVertical:20},dateSlot:{width:80,alignItems:"center"},
+ dateCard:{width:64,height:64,borderRadius:8,backgroundColor:"#1B2A39",alignItems:"center",justifyContent:"center",gap:4,borderWidth:1,borderColor:"rgba(167,196,220,0.16)"},
  dateLeft:{transform:[{scale:.91}],opacity:.74},dateRight:{transform:[{scale:.91}],opacity:.74},
- dateActive:{backgroundColor:C.red,borderColor:"#F06A74",shadowColor:C.red,shadowOpacity:.25,shadowRadius:12,elevation:5},
- dateDay:{fontSize:13,color:"#9EADBC",fontWeight:"600",letterSpacing:1},dateNumber:{fontSize:18,color:C.text,fontWeight:"500",fontVariant:["tabular-nums"]},
- dateActiveText:{color:"#FFFFFF"},dateIndicator:{width:16,height:3,borderRadius:3,backgroundColor:"#FFFFFF"},
+ dateActive:{backgroundColor:C.red,borderColor:"#FF8790",shadowColor:C.red,shadowOpacity:.30,shadowRadius:12,elevation:5},
+ dateDay:{fontFamily:"sans-serif-medium",fontSize:10,color:"#AFC0CE",fontWeight:"700",letterSpacing:0.8},dateNumber:{fontFamily:"sans-serif",fontSize:14,color:"#F3F7FA",fontWeight:"700",letterSpacing:0.2,fontVariant:["tabular-nums"]},
+ dateActiveText:{color:"#FFFFFF"},dateIndicator:{width:12,height:2,borderRadius:2,backgroundColor:"#FFFFFF",marginTop:1},
  sectionHeading:{paddingHorizontal:22,paddingTop:24,paddingBottom:14,flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
  sectionTitle:{color:C.text,fontSize:18,fontWeight:"700",letterSpacing:1.1},sectionDate:{color:C.muted,fontSize:10,marginTop:5,textTransform:"capitalize"},
  gameCount:{color:C.muted,fontSize:10,letterSpacing:1},
