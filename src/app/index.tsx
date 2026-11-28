@@ -50,14 +50,25 @@ function DateWheel({selected,onSelect}:{selected:string;onSelect:(key:string)=>v
   }),[]);
   const active=dates.findIndex(d=>dateKey(d)===selected);
 
-  // The selected item is centered when its scroll offset equals index * ITEM_WIDTH.
-  // Horizontal content padding supplies the half-screen space around the first/last item.
+  // One fixed slot width is used everywhere: layout, snapping, and scroll offsets.
+  // This keeps the selected day centered without cumulative drift.
+  const initialized = useRef(false);
   useEffect(()=>{
-    if(active>=0) requestAnimationFrame(()=>{
-      ref.current?.scrollTo({x:active*ITEM_WIDTH,animated:false});
-      scrollX.setValue(active*ITEM_WIDTH);
+    if(active<0 || initialized.current) return;
+    requestAnimationFrame(()=>{
+      const x=active*ITEM_WIDTH;
+      ref.current?.scrollTo({x,animated:false});
+      scrollX.setValue(x);
+      initialized.current=true;
     });
   },[active,width,scrollX]);
+
+  const selectDate=(index:number)=>{
+    const date=dates[index];
+    if(!date) return;
+    onSelect(dateKey(date));
+    ref.current?.scrollTo({x:index*ITEM_WIDTH,animated:true});
+  };
 
   return <View style={styles.wheelWrap}>
     <View style={styles.wheelHeader}>
@@ -84,15 +95,29 @@ function DateWheel({selected,onSelect}:{selected:string;onSelect:(key:string)=>v
     >
       {dates.map((d,i)=>{
         const key=dateKey(d),isActive=key===selected;
-        const inputRange=[(i-1)*ITEM_WIDTH,i*ITEM_WIDTH,(i+1)*ITEM_WIDTH];
-        const scale=scrollX.interpolate({inputRange,outputRange:[0.78,1,0.78],extrapolate:"clamp"});
-        const opacity=scrollX.interpolate({inputRange,outputRange:[0.42,1,0.42],extrapolate:"clamp"});
-        const rotateY=scrollX.interpolate({inputRange,outputRange:["-32deg","0deg","32deg"],extrapolate:"clamp"});
-        const translateY=scrollX.interpolate({inputRange,outputRange:[7,0,7],extrapolate:"clamp"});
-        return <Pressable key={key} onPress={()=>onSelect(key)} style={styles.dateSlot}>
+        // Dock-like magnification: several neighbouring dates grow smoothly
+        // as their centre approaches the viewport centre. All values run on UI thread.
+        const offsets=[-4,-3,-2,-1,0,1,2,3,4];
+        const inputRange=offsets.map(offset=>(i+offset)*ITEM_WIDTH);
+        const scale=scrollX.interpolate({
+          inputRange,
+          outputRange:[0.72,0.78,0.87,0.99,1.16,0.99,0.87,0.78,0.72],
+          extrapolate:"clamp"
+        });
+        const opacity=scrollX.interpolate({
+          inputRange,
+          outputRange:[0.30,0.40,0.56,0.80,1,0.80,0.56,0.40,0.30],
+          extrapolate:"clamp"
+        });
+        const lift=scrollX.interpolate({
+          inputRange,
+          outputRange:[9,7,4,1,-5,1,4,7,9],
+          extrapolate:"clamp"
+        });
+        return <Pressable key={key} onPress={()=>selectDate(i)} style={styles.dateSlot}>
           <Animated.View style={[
             styles.dateCard,
-            {opacity,transform:[{perspective:700},{rotateY},{scale},{translateY}]},
+            {opacity,transform:[{scale},{translateY:lift}]},
             isActive&&styles.dateActive
           ]}>
             <Text style={[styles.dateDay,isActive&&styles.dateActiveText]}>{dayLabel(d)}</Text>
@@ -192,10 +217,10 @@ const styles=StyleSheet.create({
  wheelWrap:{paddingTop:10,paddingBottom:12,backgroundColor:"#0A1017"},
  wheelHeader:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:22,paddingBottom:12},
  eyebrow:{color:C.muted,fontSize:10,fontWeight:"800",letterSpacing:1.7},wheelHint:{color:"#5F6F80",fontSize:8,letterSpacing:1.2},
- wheelContent:{alignItems:"center"},dateSlot:{width:82,alignItems:"center"},
+ wheelContent:{alignItems:"center"},dateSlot:{width:92,alignItems:"center"},
  dateCard:{width:72,height:116,borderRadius:28,backgroundColor:"#17212D",alignItems:"center",justifyContent:"center",gap:12,borderWidth:1,borderColor:"rgba(255,255,255,0.025)"},
  dateLeft:{transform:[{scale:.91}],opacity:.74},dateRight:{transform:[{scale:.91}],opacity:.74},
- dateActive:{backgroundColor:C.red,borderColor:"#F06A74",transform:[{scale:1.08}],shadowColor:C.red,shadowOpacity:.25,shadowRadius:12,elevation:5},
+ dateActive:{backgroundColor:C.red,borderColor:"#F06A74",shadowColor:C.red,shadowOpacity:.25,shadowRadius:12,elevation:5},
  dateDay:{fontSize:13,color:"#9EADBC",fontWeight:"600",letterSpacing:1},dateNumber:{fontSize:18,color:C.text,fontWeight:"500",fontVariant:["tabular-nums"]},
  dateActiveText:{color:"#FFFFFF"},dateIndicator:{width:16,height:3,borderRadius:3,backgroundColor:"#FFFFFF"},
  sectionHeading:{paddingHorizontal:22,paddingTop:24,paddingBottom:14,flexDirection:"row",justifyContent:"space-between",alignItems:"center"},
