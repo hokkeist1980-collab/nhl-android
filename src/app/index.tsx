@@ -217,7 +217,7 @@ const styles=StyleSheet.create({
  wheelWrap:{paddingTop:10,paddingBottom:12,backgroundColor:"#0A1017"},
  wheelHeader:{flexDirection:"row",justifyContent:"space-between",alignItems:"center",paddingHorizontal:22,paddingBottom:12},
  eyebrow:{color:C.muted,fontSize:10,fontWeight:"800",letterSpacing:1.7},wheelHint:{color:"#5F6F80",fontSize:8,letterSpacing:1.2},
- wheelContent:{alignItems:"center"},dateSlot:{width:92,alignItems:"center"},
+ wheelContent:{alignItems:"center",paddingVertical:20},dateSlot:{width:92,alignItems:"center"},
  dateCard:{width:72,height:116,borderRadius:28,backgroundColor:"#17212D",alignItems:"center",justifyContent:"center",gap:12,borderWidth:1,borderColor:"rgba(255,255,255,0.025)"},
  dateLeft:{transform:[{scale:.91}],opacity:.74},dateRight:{transform:[{scale:.91}],opacity:.74},
  dateActive:{backgroundColor:C.red,borderColor:"#F06A74",shadowColor:C.red,shadowOpacity:.25,shadowRadius:12,elevation:5},
